@@ -1,4 +1,5 @@
 import streamlit as st
+import google.generativeai as genai
 
 # 1. 페이지 및 모바일 Viewport 설정
 st.set_page_config(
@@ -41,26 +42,6 @@ with st.sidebar:
     st.header("⚙️ 설정")
     gemini_api_key = st.text_input("Gemini API Key", type="password", help="Google AI Studio에서 발급받은 API Key를 입력하세요.")
 
-# Gemini 호출 함수 (구버전/신버전 통합 호환)
-def generate_gemini_content(api_key, prompt):
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception:
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
-            )
-            return response.text
-        except Exception as e:
-            raise e
-
 # 4. 입력창
 location = st.text_input("📍 어디로 떠나시나요?", value="제주도", placeholder="예: 제주도, 강릉, 후쿠오카, 속초")
 
@@ -88,6 +69,9 @@ if location:
                     st.warning("⚠️ 왼쪽 사이드바에 Gemini API Key를 입력해주세요.")
                 else:
                     try:
+                        genai.configure(api_key=gemini_api_key)
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        
                         with st.spinner(f"AI가 {loc_clean} {cat_name} TOP 10을 불러오는 중입니다..."):
                             prompt = f"""
                             여행지 '{loc_clean}'의 대표 {cat_name} TOP 10 장소를 추천해줘.
@@ -98,8 +82,8 @@ if location:
                             * **대표 메뉴/볼거리:** [내용]
                             * **방문 팁:** [내용]
                             """
-                            result = generate_gemini_content(gemini_api_key, prompt)
-                            st.markdown(result)
+                            response = model.generate_content(prompt)
+                            st.markdown(response.text)
                     except Exception as e:
                         st.error(f"오류가 발생했습니다: {e}")
 
@@ -116,9 +100,12 @@ if location:
                 st.warning("⚠️ 사이드바에 Gemini API Key를 입력해주세요.")
             else:
                 try:
+                    genai.configure(api_key=gemini_api_key)
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    
                     with st.spinner("AI가 동선을 계산 중입니다..."):
                         prompt = f"여행지: {loc_clean}, 기간: {duration}, 스타일: {', '.join(style)}. 이동 동선이 효율적인 여행 코스를 상세히 작성해줘."
-                        result = generate_gemini_content(gemini_api_key, prompt)
-                        st.markdown(result)
+                        response = model.generate_content(prompt)
+                        st.markdown(response.text)
                 except Exception as e:
                     st.error(f"오류가 발생했습니다: {e}")
