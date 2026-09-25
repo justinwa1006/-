@@ -1,132 +1,80 @@
 import streamlit as st
 import requests
-import urllib.parse
+import re
 
-# 1. 페이지 및 모바일 Viewport 설정
-st.set_page_config(
-    page_title="TRIP LOG · TOP 10 가이드",
-    page_icon="✈️",
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
+# 페이지 기본 설정
+st.set_page_config(page_title="TRIP LOG · TOP 10 가이드", page_icon="✈️", layout="wide")
 
-# 2. 고급 모바일 앱 스타일링
+# 사이드바 설정
+with st.sidebar:
+    st.header("⚙️ 설정")
+    client_id = st.text_input("Naver Client ID", type="password")
+    client_secret = st.text_input("Naver Client Secret", type="password")
+
+# 메인 헤더
 st.markdown("""
-    <style>
-    .stApp {
-        background-color: #F8F9FA;
-        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
-    }
-    .app-header {
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-        padding: 22px 18px;
-        border-radius: 18px;
-        color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.2);
-    }
-    .app-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-    .app-subtitle { font-size: 13px; opacity: 0.9; margin-top: 4px; }
-    .place-card {
-        background-color: white;
-        padding: 16px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
-    .place-title { font-size: 16px; font-weight: 700; color: #1F2937; }
-    .place-category { font-size: 12px; color: #6B7280; margin-bottom: 6px; }
-    .place-address { font-size: 13px; color: #4B5563; }
-    </style>
-""", unsafe_allow_html=True)
-
-# 3. 앱 타이틀 헤더
-st.markdown("""
-    <div class="app-header">
-        <div class="app-title">✈️ TRIP LOG</div>
-        <div class="app-subtitle">네이버 실시간 검색 기반 TOP 10 가이드</div>
+    <div style="background-color: #2B6CB0; padding: 20px; border-radius: 10px; color: white;">
+        <h2 style="margin: 0;">✈️ TRIP LOG</h2>
+        <p style="margin: 5px 0 0 0;">네이버 실시간 검색 기반 TOP 10 가이드</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 사이드바 설정 (네이버 API Key 입력)
-with st.sidebar:
-    st.header("⚙️ 설정")
-    naver_client_id = st.text_input("Naver Client ID", type="password", help="네이버 개발자 센터에서 발급받은 Client ID")
-    naver_client_secret = st.text_input("Naver Client Secret", type="password", help="네이버 개발자 센터에서 발급받은 Client Secret")
+st.write("")
 
-# 네이버 지역 검색 API 함수
-@st.cache_data(show_spinner=False)
-def fetch_naver_places(client_id, client_secret, loc, cat):
-    query = f"{loc} {cat}"
-    url = f"https://openapi.naver.com/v1/search/local.json?query={urllib.parse.quote(query)}&display=10&sort=comment"
-    
-    headers = {
-        "X-Naver-Client-Id": client_id,
-        "X-Naver-Client-Secret": client_secret
-    }
-    
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json().get('items', [])
-    else:
-        return None
+# 검색어 입력 및 카테고리 선택
+location = st.text_input("📍 어디로 떠나시나요?", value="제주도")
+category = st.radio("카테고리", ["🍽️ 맛집", "☕ 카페", "🏞️ 관광지", "🌙 야경"], horizontal=True)
 
-# 장소 리스트 출력 함수
-def render_places(client_id, client_secret, loc, cat):
-    places = fetch_naver_places(client_id, client_secret, loc, cat)
-    
-    if places is None:
-        st.error("API 요청에 실패했습니다. Client ID와 Secret을 확인해 주세요.")
-        return
-    
-    if not places:
-        st.info("검색 결과가 없습니다.")
-        return
+# HTML 태그 제거 함수
+def clean_html(text):
+    return re.sub(r'<[^>]+>', '', text)
 
-    for idx, item in enumerate(places, 1):
-        # HTML 태그 제거
-        title = item['title'].replace('<b>', '').replace('</b>', '')
-        category = item['category']
-        address = item['address'] if item['address'] else item['roadAddress']
-        map_url = f"https://map.naver.com/v5/search/{urllib.parse.quote(f'{loc} {title}')}"
-        
-        st.markdown(f"""
-            <div class="place-card">
-                <div class="place-title">TOP {idx}. {title}</div>
-                <div class="place-category">🏷️ {category}</div>
-                <div class="place-address">📍 {address}</div>
-                <div style="margin-top: 8px;">
-                    <a href="{map_url}" target="_blank" style="color: #2563EB; font-size: 13px; text-decoration: none; font-weight: 600;">
-                        👉 네이버 지도로 확인하기
-                    </a>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-# 4. 메인 화면
-location = st.text_input("📍 어디로 떠나시나요?", value="제주도", placeholder="예: 제주도, 강릉, 속초")
-
+# 검색 실행 버튼 또는 기본 자동 검색
 if location:
-    loc_clean = location.strip()
-    
-    sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs(["🍽️ 맛집", "☕ 카페", "📸 관광지", "🌙 야경"])
-    
-    if not naver_client_id or not naver_client_secret:
-        st.warning("⚠️ 왼쪽 사이드바에 네이버 API Key (Client ID & Secret)를 입력해주세요.")
+    if not client_id or not client_secret:
+        st.error("API 요청에 실패했습니다. Client ID와 Secret을 확인해 주세요.")
     else:
-        with sub_tab1:
-            st.write("")
-            render_places(naver_client_id, naver_client_secret, loc_clean, "맛집")
+        # NAVER API HUB 규격 적용
+        url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
+        headers = {
+            "X-NCP-APIGW-API-KEY-ID": client_id,
+            "X-NCP-APIGW-API-KEY": client_secret
+        }
+        
+        # 카테고리 텍스트 정제 (이모지 제거 후 검색어 생성)
+        clean_category = category.split()[-1]
+        query = f"{location} {clean_category}"
+        
+        params = {
+            "query": query,
+            "display": 5,      # API HUB 지역 검색 제한 건수 (최대 5개)
+            "start": 1,
+            "sort": "comment"  # 리뷰/댓글순 정렬
+        }
+
+        try:
+            response = requests.get(url, headers=headers, params=params)
             
-        with sub_tab2:
-            st.write("")
-            render_places(naver_client_id, naver_client_secret, loc_clean, "카페")
-            
-        with sub_tab3:
-            st.write("")
-            render_places(naver_client_id, naver_client_secret, loc_clean, "가볼만한곳")
-            
-        with sub_tab4:
-            st.write("")
-            render_places(naver_client_id, naver_client_secret, loc_clean, "야경")
+            if response.status_code == 200:
+                data = response.json()
+                items = data.get("items", [])
+                
+                if items:
+                    st.subheader(f"🔍 '{query}' 추천 장소 목록")
+                    for idx, item in enumerate(items, 1):
+                        title = clean_html(item.get("title", ""))
+                        address = item.get("roadAddress") or item.get("address", "")
+                        link = item.get("link", "")
+                        cat = item.get("category", "")
+                        
+                        with st.expander(f"{idx}. {title}"):
+                            st.write(f"**카테고리:** {cat}")
+                            st.write(f"**주소:** {address}")
+                            if link:
+                                st.write(f"**상세링크:** [바로가기]({link})")
+                else:
+                    st.info("검색 결과가 없습니다.")
+            else:
+                st.error(f"API 오류 발생 (코드 {response.status_code}): Client ID/Secret 값을 다시 확인해주세요.")
+        except Exception as e:
+            st.error(f"요청 중 오류 발생: {e}")
