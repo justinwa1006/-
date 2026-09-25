@@ -70,7 +70,7 @@ if location:
                 else:
                     try:
                         genai.configure(api_key=gemini_api_key)
-                        model = genai.GenerativeModel('gemini-3.8-flash')
+                        model = genai.GenerativeModel('gemini-3.6-flash')
                         
                         with st.spinner(f"AI가 {loc_clean} {cat_name} TOP 10을 불러오는 중입니다..."):
                             prompt = f"""
