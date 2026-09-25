@@ -182,12 +182,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. 사이드바 설정
-with st.sidebar:
-    st.subheader("⚙️ API 인증 설정")
-    client_id = st.text_input("Naver Client ID", type="password")
-    client_secret = st.text_input("Naver Client Secret", type="password")
-    st.caption("NAVER API HUB에서 발급받은 인증키를 입력해주세요.")
+# 4. API 인증 설정 (Secrets 우선 적용 -> 없으면 사이드바 입력)
+client_id = st.secrets.get("NAVER_CLIENT_ID", "")
+client_secret = st.secrets.get("NAVER_CLIENT_SECRET", "")
+
+# Secrets에 설정이 안 되어 있을 때만 사이드바 입력창 노출
+if not client_id or not client_secret:
+    with st.sidebar:
+        st.subheader("⚙️ API 인증 설정")
+        client_id = st.text_input("Naver Client ID", type="password")
+        client_secret = st.text_input("Naver Client Secret", type="password")
 
 # 5. 상단 헤더
 st.markdown("""
