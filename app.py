@@ -117,7 +117,7 @@ with st.sidebar:
     client_secret = st.text_input("Naver Client Secret", type="password")
     st.caption("NAVER API HUB에서 발급받은 인증키를 입력해주세요.")
 
-# 4. 상단 히어로 헤더 (TOP 10으로 수정)
+# 4. 상단 히어로 헤더
 st.markdown("""
     <div class="hero-container">
         <div class="hero-title">✈️ TRIP LOG</div>
@@ -125,14 +125,14 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 사용자 입력 폼 (기본값 제거 / 빈칸 설정)
+# 5. 사용자 입력 폼 (기본 입력값 빈칸 설정)
 location = st.text_input("📍 떠나실 목적지를 입력해 보세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산")
 category = st.radio("카테고리 선택", ["🍽️ 맛집", "☕ 카페", "🏞️ 관광지", "🌙 야경"], horizontal=True)
 
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 6. 결과 출력
+# 6. 결과 출력 (API 2회 호출을 통해 10개 병합 출력)
 if location:
     if not client_id or not client_secret:
         st.info("💡 왼쪽 사이드바에 Naver API Client ID와 Secret을 입력해 주세요.")
@@ -146,47 +146,44 @@ if location:
         clean_category = category.split()[-1]
         query = f"{location} {clean_category}"
         
-        # display를 10으로 설정하여 최대 10개까지 출력
-        params = {
-            "query": query,
-            "display": 10,
-            "start": 1,
-            "sort": "comment"
-        }
+        # 1차 요청 (1~5위) 및 2차 요청 (6~10위)
+        params1 = {"query": query, "display": 5, "start": 1, "sort": "comment"}
+        params2 = {"query": query, "display": 5, "start": 6, "sort": "comment"}
 
         try:
-            response = requests.get(url, headers=headers, params=params)
+            res1 = requests.get(url, headers=headers, params=params1)
+            res2 = requests.get(url, headers=headers, params=params2)
             
-            if response.status_code == 200:
-                data = response.json()
-                items = data.get("items", [])
+            items = []
+            if res1.status_code == 200:
+                items.extend(res1.json().get("items", []))
+            if res2.status_code == 200:
+                items.extend(res2.json().get("items", []))
                 
-                if items:
-                    st.write("")
-                    st.markdown(f"#### 🔍 **{location}** 인기 {clean_category} TOP {len(items)}")
+            if items:
+                st.write("")
+                st.markdown(f"#### 🔍 **{location}** 인기 {clean_category} TOP {len(items)}")
+                
+                for idx, item in enumerate(items, 1):
+                    title = clean_html(item.get("title", ""))
+                    address = item.get("roadAddress") or item.get("address", "")
+                    cat = item.get("category", "")
                     
-                    for idx, item in enumerate(items, 1):
-                        title = clean_html(item.get("title", ""))
-                        address = item.get("roadAddress") or item.get("address", "")
-                        cat = item.get("category", "")
-                        
-                        map_query = urllib.parse.quote(f"{location} {title}")
-                        map_url = f"https://map.naver.com/v5/search/{map_query}"
-                        
-                        st.markdown(f"""
-                            <div class="place-card">
-                                <span class="place-badge">TOP {idx}</span>
-                                <div class="place-title">{title}</div>
-                                <div class="place-category">🏷️ {cat}</div>
-                                <div class="place-address">📍 {address}</div>
-                                <a href="{map_url}" target="_blank" class="map-btn">
-                                    네이버 지도로 위치 확인 ↗
-                                </a>
-                            </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.warning("검색 결과가 없습니다.")
+                    map_query = urllib.parse.quote(f"{location} {title}")
+                    map_url = f"https://map.naver.com/v5/search/{map_query}"
+                    
+                    st.markdown(f"""
+                        <div class="place-card">
+                            <span class="place-badge">TOP {idx}</span>
+                            <div class="place-title">{title}</div>
+                            <div class="place-category">🏷️ {cat}</div>
+                            <div class="place-address">📍 {address}</div>
+                            <a href="{map_url}" target="_blank" class="map-btn">
+                                네이버 지도로 위치 확인 ↗
+                            </a>
+                        </div>
+                    """, unsafe_allow_html=True)
             else:
-                st.error(f"API 오류 발생 ({response.status_code}): 키 정보를 다시 확인해주세요.")
+                st.warning("검색 결과가 없습니다.")
         except Exception as e:
             st.error(f"요청 중 오류가 발생했습니다: {e}")
