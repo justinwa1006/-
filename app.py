@@ -130,7 +130,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 5. 사용자 입력 폼
-location = st.text_input("📍 떠나실 목적지를 입력해 보세요", value="제주도 중문", placeholder="예: 강릉, 속초, 부산")
+location = st.text_input("📍 떠나실 목적지를 입력해 보세요", placeholder="예: 강릉, 속초, 부산")
 category = st.radio("카테고리 선택", ["🍽️ 맛집", "☕ 카페", "🏞️ 관광지", "🌙 야경"], horizontal=True)
 
 def clean_html(text):
