@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import re
+import urllib.parse
 
 # 페이지 기본 설정
 st.set_page_config(page_title="TRIP LOG · TOP 10 가이드", page_icon="✈️", layout="wide")
@@ -29,27 +30,25 @@ category = st.radio("카테고리", ["🍽️ 맛집", "☕ 카페", "🏞️ �
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 검색 실행 버튼 또는 기본 자동 검색
+# 검색 실행
 if location:
     if not client_id or not client_secret:
         st.error("API 요청에 실패했습니다. Client ID와 Secret을 확인해 주세요.")
     else:
-        # NAVER API HUB 규격 적용
         url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
         headers = {
             "X-NCP-APIGW-API-KEY-ID": client_id,
             "X-NCP-APIGW-API-KEY": client_secret
         }
         
-        # 카테고리 텍스트 정제 (이모지 제거 후 검색어 생성)
         clean_category = category.split()[-1]
         query = f"{location} {clean_category}"
         
         params = {
             "query": query,
-            "display": 5,      # API HUB 지역 검색 제한 건수 (최대 5개)
+            "display": 5,
             "start": 1,
-            "sort": "comment"  # 리뷰/댓글순 정렬
+            "sort": "comment"
         }
 
         try:
@@ -64,14 +63,16 @@ if location:
                     for idx, item in enumerate(items, 1):
                         title = clean_html(item.get("title", ""))
                         address = item.get("roadAddress") or item.get("address", "")
-                        link = item.get("link", "")
                         cat = item.get("category", "")
+                        
+                        # 네이버 지도 바로가기 URL 생성
+                        map_query = urllib.parse.quote(f"{location} {title}")
+                        map_url = f"https://map.naver.com/p/search/{map_query}"
                         
                         with st.expander(f"{idx}. {title}"):
                             st.write(f"**카테고리:** {cat}")
                             st.write(f"**주소:** {address}")
-                            if link:
-                                st.write(f"**상세링크:** [바로가기]({link})")
+                            st.write(f"**📍 지도 위치:** [네이버 지도로 보기]({map_url})")
                 else:
                     st.info("검색 결과가 없습니다.")
             else:
