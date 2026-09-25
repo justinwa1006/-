@@ -3,62 +3,80 @@ import requests
 import re
 import urllib.parse
 
-# 1. 페이지 레이아웃 및 제목 설정
+# 1. 페이지 레이아웃 설정 (theme 옵션 제거하여 시스템 테마 자동 추종)
 st.set_page_config(
     page_title="TRIP LOG · 여행 가이드",
     page_icon="✈️",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# 2. 전문 모바일 UI 커스텀 CSS 스타일링
+# 2. 다크 모드 / 라이트 모드 자동 반응형 커스텀 CSS
 st.markdown("""
     <style>
-    /* 배경색 및 기본 폰트 */
-    .stApp {
-        background-color: #F8FAFC;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* --------------------------------------------------
+       라이트 모드 (기본 스타일: 흰 배경 / 검은 글자)
+    -------------------------------------------------- */
+    :root {
+        --card-bg: #FFFFFF;
+        --card-border: #E2E8F0;
+        --text-primary: #0F172A;
+        --text-secondary: #64748B;
+        --text-address: #334155;
+        --badge-bg: #EFF6FF;
+        --badge-text: #1D4ED8;
     }
-    
-    /* 사이드바 스타일링 */
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        border-right: 1px solid #E2E8F0;
+
+    /* --------------------------------------------------
+       다크 모드 (시스템 설정이 다크 모드일 때 자동 적용)
+    -------------------------------------------------- */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --card-bg: #1E293B;
+            --card-border: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-address: #CBD5E1;
+            --badge-bg: #1E3A8A;
+            --badge-text: #93C5FD;
+        }
     }
-    
+
     /* 상단 배너 히어로 헤더 */
     .hero-container {
         background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
         padding: 24px 20px;
         border-radius: 16px;
-        color: white;
+        color: #FFFFFF !important;
         margin-bottom: 24px;
-        box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.15);
+        box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.2);
     }
     .hero-title {
         font-size: 22px;
         font-weight: 800;
         letter-spacing: -0.5px;
         margin: 0;
+        color: #FFFFFF !important;
     }
     .hero-subtitle {
         font-size: 13px;
-        color: #E0E7FF;
+        color: #E0E7FF !important;
         margin-top: 6px;
     }
-    
-    /* 추천 장소 카드 스타일 */
+
+    /* 추천 장소 카드 스타일 (테마 변수 적용) */
     .place-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        background-color: var(--card-bg);
+        border: 1px solid var(--card-border);
         border-radius: 12px;
         padding: 16px 20px;
         margin-bottom: 12px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
     }
     .place-badge {
         display: inline-block;
-        background-color: #EFF6FF;
-        color: #1D4ED8;
+        background-color: var(--badge-bg);
+        color: var(--badge-text);
         font-size: 11px;
         font-weight: 700;
         padding: 3px 8px;
@@ -68,17 +86,17 @@ st.markdown("""
     .place-title {
         font-size: 16px;
         font-weight: 700;
-        color: #0F172A;
+        color: var(--text-primary);
         margin-bottom: 4px;
     }
     .place-category {
         font-size: 12px;
-        color: #64748B;
+        color: var(--text-secondary);
         margin-bottom: 8px;
     }
     .place-address {
         font-size: 13px;
-        color: #334155;
+        color: var(--text-address);
         margin-bottom: 12px;
     }
     .map-btn {
@@ -86,10 +104,10 @@ st.markdown("""
         align-items: center;
         gap: 4px;
         background-color: #03C75A;
-        color: white !important;
+        color: #FFFFFF !important;
         font-size: 12px;
         font-weight: 600;
-        padding: 6px 12px;
+        padding: 8px 14px;
         border-radius: 6px;
         text-decoration: none !important;
     }
@@ -112,7 +130,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 5. 사용자 입력 폼
-location = st.text_input("📍 떠나실 목적지를 입력해 보세요", placeholder="예: 강릉, 속초, 부산")
+location = st.text_input("📍 떠나실 목적지를 입력해 보세요", value="제주도 중문", placeholder="예: 강릉, 속초, 부산")
 category = st.radio("카테고리 선택", ["🍽️ 맛집", "☕ 카페", "🏞️ 관광지", "🌙 야경"], horizontal=True)
 
 def clean_html(text):
@@ -158,7 +176,7 @@ if location:
                         map_query = urllib.parse.quote(f"{location} {title}")
                         map_url = f"https://map.naver.com/v5/search/{map_query}"
                         
-                        # 카드형 HTML 레더링
+                        # 반응형 변수가 적용된 카드 HTML
                         st.markdown(f"""
                             <div class="place-card">
                                 <span class="place-badge">TOP {idx}</span>
