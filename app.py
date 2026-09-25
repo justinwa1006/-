@@ -82,7 +82,7 @@ if location:
                 else:
                     try:
                         genai.configure(api_key=gemini_api_key)
-                        model = genai.GenerativeModel('gemini-3.6-flash')
+                        model = genai.GenerativeModel('gemini-2.5-flash')
                         
                         map_type_str = "네이버 지도" if is_korea else "구글 지도"
                         
@@ -141,7 +141,7 @@ if location:
             else:
                 try:
                     genai.configure(api_key=gemini_api_key)
-                    model = genai.GenerativeModel('gemini-3.6-flash')
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     with st.spinner("AI가 동선을 계산 중입니다..."):
                         prompt = f"여행지: {loc_clean}, 기간: {duration}, 스타일: {', '.join(style)}. 이동 동선이 효율적인 여행 코스를 상세히 작성해줘."
