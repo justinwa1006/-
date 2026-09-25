@@ -3,7 +3,7 @@ import requests
 import re
 import urllib.parse
 
-# 1. 페이지 레이아웃 설정 (theme 옵션 제거하여 시스템 테마 자동 추종)
+# 1. 페이지 레이아웃 설정 (시스템 다크/라이트 테마 자동 반영)
 st.set_page_config(
     page_title="TRIP LOG · 여행 가이드",
     page_icon="✈️",
@@ -14,9 +14,7 @@ st.set_page_config(
 # 2. 다크 모드 / 라이트 모드 자동 반응형 커스텀 CSS
 st.markdown("""
     <style>
-    /* --------------------------------------------------
-       라이트 모드 (기본 스타일: 흰 배경 / 검은 글자)
-    -------------------------------------------------- */
+    /* 라이트 모드 기본 스타일 */
     :root {
         --card-bg: #FFFFFF;
         --card-border: #E2E8F0;
@@ -27,9 +25,7 @@ st.markdown("""
         --badge-text: #1D4ED8;
     }
 
-    /* --------------------------------------------------
-       다크 모드 (시스템 설정이 다크 모드일 때 자동 적용)
-    -------------------------------------------------- */
+    /* 다크 모드 스타일 */
     @media (prefers-color-scheme: dark) {
         :root {
             --card-bg: #1E293B;
@@ -64,7 +60,7 @@ st.markdown("""
         margin-top: 6px;
     }
 
-    /* 추천 장소 카드 스타일 (테마 변수 적용) */
+    /* 카드 스타일 */
     .place-card {
         background-color: var(--card-bg);
         border: 1px solid var(--card-border);
@@ -121,16 +117,16 @@ with st.sidebar:
     client_secret = st.text_input("Naver Client Secret", type="password")
     st.caption("NAVER API HUB에서 발급받은 인증키를 입력해주세요.")
 
-# 4. 상단 히어로 헤더
+# 4. 상단 히어로 헤더 (TOP 10으로 수정)
 st.markdown("""
     <div class="hero-container">
         <div class="hero-title">✈️ TRIP LOG</div>
-        <div class="hero-subtitle">네이버 실시간 지역 데이터 기반 TOP 5 가이드</div>
+        <div class="hero-subtitle">네이버 실시간 지역 데이터 기반 TOP 10 가이드</div>
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 사용자 입력 폼
-location = st.text_input("📍 떠나실 목적지를 입력해 보세요", placeholder="예: 강릉, 속초, 부산")
+# 5. 사용자 입력 폼 (기본값 제거 / 빈칸 설정)
+location = st.text_input("📍 떠나실 목적지를 입력해 보세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산")
 category = st.radio("카테고리 선택", ["🍽️ 맛집", "☕ 카페", "🏞️ 관광지", "🌙 야경"], horizontal=True)
 
 def clean_html(text):
@@ -150,9 +146,10 @@ if location:
         clean_category = category.split()[-1]
         query = f"{location} {clean_category}"
         
+        # display를 10으로 설정하여 최대 10개까지 출력
         params = {
             "query": query,
-            "display": 5,
+            "display": 10,
             "start": 1,
             "sort": "comment"
         }
@@ -166,7 +163,7 @@ if location:
                 
                 if items:
                     st.write("")
-                    st.markdown(f"#### 🔍 **{location}** 인기 {clean_category}")
+                    st.markdown(f"#### 🔍 **{location}** 인기 {clean_category} TOP {len(items)}")
                     
                     for idx, item in enumerate(items, 1):
                         title = clean_html(item.get("title", ""))
@@ -176,7 +173,6 @@ if location:
                         map_query = urllib.parse.quote(f"{location} {title}")
                         map_url = f"https://map.naver.com/v5/search/{map_query}"
                         
-                        # 반응형 변수가 적용된 카드 HTML
                         st.markdown(f"""
                             <div class="place-card">
                                 <span class="place-badge">TOP {idx}</span>
