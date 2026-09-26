@@ -70,7 +70,7 @@ st.markdown("""
         opacity: 0.95;
     }
 
-    /* ☀️ 밝은 테마 카테고리 칩 (stRadio) */
+    /* ☀️ 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -80,7 +80,6 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-    /* 기본 (미선택) 버튼 스타일 */
     div[data-testid="stRadio"] label {
         flex: 1 1 calc(50% - 6px) !important;
         min-height: 44px !important;
@@ -105,7 +104,6 @@ st.markdown("""
         font-size: 13px !important;
     }
 
-    /* 선택(Active) 상태 버튼 스타일 */
     div[data-testid="stRadio"] label:has(input:checked) {
         background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
         border-color: #FF6B6B !important;
@@ -117,7 +115,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* 📸 화사한 밝은 카드 컨테이너 */
+    /* 📸 카드 컨테이너 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 16px !important;
         border: 1px solid #E2E8F0 !important;
@@ -150,7 +148,7 @@ st.markdown("""
         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
 
-    /* 🏷️ 파스텔톤 #해시태그 뱃지 */
+    /* 🏷️ #해시태그 뱃지 */
     .tag-container {
         margin: 6px 0 10px 0;
         display: flex;
@@ -159,7 +157,7 @@ st.markdown("""
     }
     .tag-badge {
         display: inline-block;
-        background: #EFF6FF; /* 파스텔 블루 */
+        background: #EFF6FF;
         color: #1D4ED8;
         font-size: 11px;
         font-weight: 600;
@@ -168,7 +166,7 @@ st.markdown("""
         border: 1px solid #BFDBFE;
     }
     .tag-badge-sub {
-        background: #FFF1F2; /* 파스텔 로즈 */
+        background: #FFF1F2;
         color: #E11D48;
         border-color: #FECDD3;
     }
@@ -199,7 +197,6 @@ st.markdown("""
         margin-bottom: 6px;
     }
 
-    /* 일정 박스 스타일 */
     .plan-box {
         background-color: #F8FAFC;
         border: 1px solid #E2E8F0;
@@ -263,20 +260,17 @@ DEFAULT_IMAGES = {
 def generate_tags(raw_category, address, title, location_name=""):
     tags = []
     
-    # 1. 동네 추출
     addr_match = re.search(r'([가-힣]+(?:읍|면|동|리|구|시))', address)
     if addr_match:
         loc_tag = addr_match.group(1).replace('특별자치도', '').replace('광역시', '').replace('특별시', '').replace('시', '').replace('구', '').replace('읍', '').replace('면', '')
         if len(loc_tag) >= 2:
             tags.append(f"#{loc_tag}핫플")
 
-    # 2. 카테고리 추출
     cat_parts = [p.strip() for p in raw_category.split('>') if p.strip()]
     for part in cat_parts:
         if part not in ["음식점", "카페,디저트", "여행,명소", "관광,명소"]:
             tags.append(f"#{part}")
 
-    # 3. 입력 지역명 기반
     clean_loc = re.sub(r'(특별자치도|광역시|특별시|자치도|시|도)$', '', location_name.strip())
     if not clean_loc:
         clean_loc = location_name.strip()
@@ -305,14 +299,15 @@ def generate_carousel_html(img_urls):
     return html
 
 # -------------------------------------------------------------
-# 7. API 캐싱 처리 함수
+# 7. API 캐싱 처리 함수 (🎯 TOP 10 제한 수정)
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_naver_search(query, c_id, c_secret):
     url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     items = []
-    for start in [1, 6, 11]:
+    # 5개씩 2회 호출하여 정확히 최대 10개만 수집
+    for start in [1, 6]:
         params = {"query": query, "display": 5, "start": start, "sort": "comment"}
         try:
             res = requests.get(url, headers=headers, params=params)
@@ -323,7 +318,7 @@ def fetch_naver_search(query, c_id, c_secret):
                 items.extend(fetched)
         except Exception:
             break
-    return items
+    return items[:10]
 
 @st.cache_data(ttl=3600)
 def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
@@ -409,10 +404,11 @@ def generate_smart_schedule(itinerary_list):
 tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len(st.session_state.itinerary)})"])
 
 with tab1:
-    location = st.text_input("📍 떠나실 목적지", value="제주도", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
+    # 기본값(value)을 빈 문자열로 변경하여 입력 창을 비워둡니다.
+    location = st.text_input("📍 떠나실 목적지", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
 
     sub_area = "전체"
-    if "제주" in location:
+    if location and "제주" in location:
         sub_area = st.selectbox("🏝️ 제주 세부 지역", ["전체", "애월/한림", "서귀포/중문", "성산/구좌", "제주시/조천"])
 
     st.write("**카테고리 선택**")
@@ -429,7 +425,8 @@ with tab1:
     elif category == "☕ 카페":
         subcategory = st.selectbox("☕ 카페 세부 종류", ["전체", "디저트/베이커리", "뷰맛집", "대형카페", "감성카페"])
 
-    if location:
+    # 목적지가 입력되었을 때만 검색 실행
+    if location.strip():
         if not client_id or not client_secret:
             st.info("💡 사이드바 또는 Streamlit Secrets에 Naver API Key를 설정해 주세요.")
         else:
@@ -457,7 +454,6 @@ with tab1:
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 📱 모바일 가로 스와이프 슬라이더
                         st.markdown(generate_carousel_html(img_urls), unsafe_allow_html=True)
                         
                         st.write("")
@@ -465,7 +461,6 @@ with tab1:
                         st.markdown(generate_tags(raw_cat, address, title, location_name=search_location), unsafe_allow_html=True)
                         st.caption(f"📍 {address}")
                         
-                        # 모바일 터치 최적화 버튼 레이아웃
                         st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>', unsafe_allow_html=True)
                         
                         place_info = {"title": title, "address": address, "category": raw_cat}
@@ -478,6 +473,8 @@ with tab1:
                                 st.toast(f"⚠️ 이미 담긴 장소입니다.")
             else:
                 st.warning("검색 결과가 없습니다.")
+    else:
+        st.info("💡 위 입력창에 목적지(예: 강릉, 부산 등)를 입력해 주세요.")
 
 # -------------------------------------------------------------
 # TAB 2: 담은 일정 코스
