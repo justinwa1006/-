@@ -22,46 +22,18 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (멀티 이미지 갤러리 슬라이더 추가)
+# 3. 여행 감성 커스텀 CSS (히어로 배너, 대분류 칩, 버튼)
 # -------------------------------------------------------------
 st.markdown("""
     <style>
-    :root {
-        --bg-color: #F8FAFC;
-        --card-bg: #FFFFFF;
-        --card-border: #E2E8F0;
-        --text-primary: #0F172A;
-        --text-secondary: #64748B;
-        --text-address: #334155;
-        --badge-bg: #E0F2FE;
-        --badge-text: #0369A1;
-        --plan-bg: #F0F9FF;
-        --plan-border: #BAE6FD;
-    }
-
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --bg-color: #0F172A;
-            --card-bg: #1E293B;
-            --card-border: #334155;
-            --text-primary: #F8FAFC;
-            --text-secondary: #94A3B8;
-            --text-address: #CBD5E1;
-            --badge-bg: #0369A1;
-            --badge-text: #E0F2FE;
-            --plan-bg: #0F172A;
-            --plan-border: #1E3A8A;
-        }
-    }
-
     /* 히어로 배너 */
     .hero-container {
         background: linear-gradient(135deg, #0284C7 0%, #2563EB 50%, #4F46E5 100%);
-        padding: 28px 24px;
-        border-radius: 20px;
+        padding: 24px;
+        border-radius: 18px;
         color: #FFFFFF !important;
-        margin-bottom: 24px;
-        box-shadow: 0 12px 20px -5px rgba(37, 99, 235, 0.3);
+        margin-bottom: 20px;
+        box-shadow: 0 10px 18px -5px rgba(37, 99, 235, 0.3);
         text-align: center;
     }
     .hero-title {
@@ -73,7 +45,7 @@ st.markdown("""
     .hero-subtitle {
         font-size: 13px;
         color: #E0F2FE !important;
-        margin-top: 8px;
+        margin-top: 6px;
     }
 
     /* 대분류 라디오 ➔ 여행 칩(Chip) 커스텀 */
@@ -86,85 +58,14 @@ st.markdown("""
         margin-bottom: 12px;
     }
     div[data-testid="stRadio"] label {
-        background-color: var(--card-bg) !important;
-        border: 1.5px solid var(--card-border) !important;
         border-radius: 12px !important;
-        padding: 10px 16px !important;
+        padding: 8px 14px !important;
         cursor: pointer;
-        transition: all 0.2s ease-in-out;
         font-weight: 600 !important;
         font-size: 14px !important;
-        color: var(--text-primary) !important;
     }
 
-    /* 장소 카드 스타일 */
-    .place-card {
-        background-color: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 16px;
-        overflow: hidden;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-        transition: transform 0.2s ease;
-    }
-    .place-card:hover {
-        transform: translateY(-2px);
-    }
-
-    /* 멀티 사진 가로 스크롤 갤러리 */
-    .place-img-gallery {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        padding: 10px;
-        background-color: rgba(0, 0, 0, 0.02);
-        border-bottom: 1px solid var(--card-border);
-    }
-    .place-img-gallery::-webkit-scrollbar {
-        height: 6px;
-    }
-    .place-img-gallery::-webkit-scrollbar-thumb {
-        background: #CBD5E1;
-        border-radius: 10px;
-    }
-    .place-img-item {
-        flex: 0 0 78%;
-        height: 180px;
-        object-fit: cover;
-        border-radius: 12px;
-        scroll-snap-align: start;
-    }
-
-    .place-content {
-        padding: 16px 20px;
-    }
-    .place-badge {
-        display: inline-block;
-        background-color: var(--badge-bg);
-        color: var(--badge-text);
-        font-size: 11px;
-        font-weight: 800;
-        padding: 3px 10px;
-        border-radius: 20px;
-        margin-bottom: 8px;
-    }
-    .place-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 4px;
-    }
-    .place-category {
-        font-size: 12px;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .place-address {
-        font-size: 13px;
-        color: var(--text-address);
-        margin-bottom: 14px;
-    }
+    /* 네이버 지도 버튼 */
     .map-btn {
         display: inline-flex;
         align-items: center;
@@ -172,18 +73,17 @@ st.markdown("""
         color: #FFFFFF !important;
         font-size: 13px;
         font-weight: 700;
-        padding: 8px 16px;
+        padding: 6px 14px;
         border-radius: 8px;
         text-decoration: none !important;
-        box-shadow: 0 2px 6px rgba(3, 199, 90, 0.2);
     }
 
-    /* 일정 박스 */
+    /* 일정 출력 박스 */
     .plan-box {
-        background-color: var(--plan-bg);
-        border: 1px solid var(--plan-border);
+        background-color: rgba(3, 105, 161, 0.05);
+        border: 1px solid rgba(3, 105, 161, 0.2);
         border-radius: 16px;
-        padding: 22px;
+        padding: 20px;
         margin-top: 16px;
     }
     </style>
@@ -214,7 +114,7 @@ st.markdown("""
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 예비 이미지
+# 고화질 대표 예비 이미지
 DEFAULT_IMAGES = {
     "🍽️ 맛집": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
     "☕ 카페": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
@@ -227,7 +127,7 @@ DEFAULT_IMAGES = {
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_naver_search(query, c_id, c_secret):
-    """장소 검색 API (1시간 동안 캐싱)"""
+    """장소 검색 API (1시간 캐싱)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     params1 = {"query": query, "display": 5, "start": 1, "sort": "comment"}
@@ -245,8 +145,8 @@ def fetch_naver_search(query, c_id, c_secret):
     return items
 
 @st.cache_data(ttl=3600)
-def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=4):
-    """이미지 검색 API (인기 대표 사진 4장 불러오기)"""
+def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=3):
+    """이미지 검색 API (인기 사진 3장 가져오기)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     params = {"query": f"{location_name} {place_title}", "display": display_count, "sort": "sim"}
@@ -262,10 +162,11 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
     except Exception:
         pass
 
-    if not img_list:
-        img_list = [DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])]
+    fallback_img = DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
+    while len(img_list) < display_count:
+        img_list.append(fallback_img)
 
-    return img_list
+    return img_list[:display_count]
 
 # -------------------------------------------------------------
 # 7. 최적 동선 정렬 함수
@@ -326,7 +227,7 @@ def generate_smart_schedule(itinerary_list):
 tab1, tab2 = st.tabs(["🧭 장소 탐색", f"🗓️ 나의 일정표 ({len(st.session_state.itinerary)})"])
 
 # -------------------------------------------------------------
-# TAB 1: 장소 검색 & 멀티 카드 노출
+# TAB 1: 장소 검색 & 네이버 플레이스 스타일 카드
 # -------------------------------------------------------------
 with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
@@ -363,39 +264,35 @@ with tab1:
                     address = item.get("roadAddress") or item.get("address", "")
                     cat = item.get("category", "")
                     
-                    # 장소별 인기 사진 4장 불러오기
-                    img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=4)
+                    img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=3)
                     map_query = urllib.parse.quote(f"{location} {title}")
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
-                    # 갤러리 HTML 태그 생성
-                    gallery_html = "".join([f'<img src="{img}" class="place-img-item" alt="{title}">' for img in img_urls])
-                    
-                    st.markdown(f"""
-                        <div class="place-card">
-                            <div class="place-img-gallery">
-                                {gallery_html}
-                            </div>
-                            <div class="place-content">
-                                <span class="place-badge">TOP {idx}</span>
-                                <div class="place-title">{title}</div>
-                                <div class="place-category">🏷️ {cat}</div>
-                                <div class="place-address">📍 {address}</div>
-                                <a href="{map_url}" target="_blank" class="map-btn">
-                                    네이버 지도로 위치 확인 ↗
-                                </a>
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    place_info = {"title": title, "address": address, "category": cat}
-                    if st.button(f"➕ '{title}' 일정에 담기", key=f"add_{idx}_{title}"):
-                        if place_info not in st.session_state.itinerary:
-                            st.session_state.itinerary.append(place_info)
-                            st.toast(f"✅ '{title}' 장소가 일정표에 추가되었습니다!")
-                            st.rerun()
-                        else:
-                            st.toast(f"⚠️ 이미 일정에 담긴 장소입니다.")
+                    # 네이버 플레이스 스타일 카드 컨테이너
+                    with st.container(border=True):
+                        # 📸 3분할 대표 이미지 그리드 (메인 1장 + 서브 2장)
+                        img_cols = st.columns([2, 1, 1])
+                        for c_idx, col in enumerate(img_cols):
+                            with col:
+                                if c_idx < len(img_urls):
+                                    st.image(img_urls[c_idx], use_container_width=True)
+                        
+                        st.write("")
+                        st.markdown(f"### **{idx}. {title}**")
+                        st.caption(f"🏷️ **{cat}** | 📍 {address}")
+                        
+                        col_map, col_add = st.columns([1.5, 1])
+                        with col_map:
+                            st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🗺️ 네이버 지도로 위치 확인 ↗</a>', unsafe_allow_html=True)
+                        with col_add:
+                            place_info = {"title": title, "address": address, "category": cat}
+                            if st.button(f"➕ 일정에 담기", key=f"add_{idx}_{title}"):
+                                if place_info not in st.session_state.itinerary:
+                                    st.session_state.itinerary.append(place_info)
+                                    st.toast(f"✅ '{title}' 일정에 추가되었습니다!")
+                                    st.rerun()
+                                else:
+                                    st.toast(f"⚠️ 이미 담긴 장소입니다.")
             else:
                 st.warning("검색 결과가 없습니다.")
 
