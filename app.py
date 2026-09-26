@@ -22,7 +22,7 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (인스타그램/네이버 플레이스 스타일)
+# 3. 여행 감성 커스텀 CSS (인스타 1:1 피드 + 전체화면 확대 대응)
 # -------------------------------------------------------------
 st.markdown("""
     <!-- 외부 이미지 리퍼러 보안 차단 해제 -->
@@ -89,38 +89,40 @@ st.markdown("""
         margin-bottom: 16px !important;
     }
 
-    /* 🖼️ 이미지 마스크 & 호버 모션 */
+    /* 🖼️ 1. 인스타 갤러리 피드 (1:1 정사각형 통일 & 호버 효과) */
     div[data-testid="stColumn"] div[data-testid="stImage"] {
         border-radius: 12px !important;
         overflow: hidden !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06) !important;
     }
-    
+
     div[data-testid="stColumn"] div[data-testid="stImage"] img {
-        height: 120px !important;
-        object-fit: cover !important;
+        aspect-ratio: 1 / 1 !important;
         width: 100% !important;
+        height: auto !important;
+        object-fit: cover !important;
         border-radius: 12px !important;
-        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.35s ease !important;
+        transition: transform 0.3s ease, filter 0.3s ease !important;
     }
 
     /* 인스타 피드 호버 효과 */
     div[data-testid="stColumn"] div[data-testid="stImage"]:hover img {
-        transform: scale(1.08) !important;
+        transform: scale(1.06) !important;
         filter: brightness(1.03) !important;
     }
 
-    /* 🔍 모달 팝업(사진 확대 시) 원본 비율 복원 */
+    /* 🔍 2. 전체화면(확대) 클릭 시 원본 비율 & 시원한 크기 복원 */
+    div[data-testid="stStyledFullScreenFrame"] img,
     div[role="dialog"] img,
-    div[data-baseweb="modal"] img,
     div[data-testid="stModal"] img,
-    div[data-testid="stDialog"] img {
+    div[data-baseweb="modal"] img {
+        aspect-ratio: auto !important;
         height: auto !important;
-        max-height: 80vh !important;
+        max-height: 85vh !important;
         width: auto !important;
-        max-width: 100% !important;
+        max-width: 90vw !important;
         object-fit: contain !important;
-        border-radius: 12px !important;
+        border-radius: 8px !important;
     }
 
     /* 감성 뱃지 & 해시태그 스타일 */
@@ -190,7 +192,7 @@ st.markdown("""
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 고화질 대표 예비 이미지 목록
+# 고화질 대표 예비 이미지 목록 (정사각형 크롭 대응)
 DEFAULT_IMAGES = {
     "🍽️ 맛집": [
         "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
@@ -321,7 +323,7 @@ def generate_smart_schedule(itinerary_list):
 tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len(st.session_state.itinerary)})"])
 
 # -------------------------------------------------------------
-# TAB 1: 장소 검색 & 인스타 감성 카드
+# TAB 1: 장소 검색 & 인스타 감성 피드 갤러리
 # -------------------------------------------------------------
 with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
@@ -363,7 +365,7 @@ with tab1:
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 🖼️ 2행 3열 인스타 감성 갤러리 그리드
+                        # 🖼️ 1:1 정사각형 인스타 피드 그리드 (2행 3열)
                         for row in range(2):
                             img_cols = st.columns(3)
                             for c_idx in range(3):
