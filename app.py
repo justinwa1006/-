@@ -22,7 +22,7 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 커스텀 CSS (📱 모바일 퍼스트 가독성 최적화)
+# 3. 커스텀 CSS (☀️ 밝은 테마 가독성 & 터치 최적화)
 # -------------------------------------------------------------
 st.markdown("""
     <meta name="referrer" content="no-referrer">
@@ -36,13 +36,13 @@ st.markdown("""
         box-sizing: border-box;
     }
 
-    /* 📱 모바일 화면 여백 최적화 (Streamlit 기본 패딩 축소) */
+    /* 📱 모바일 화면 여백 최적화 */
     .block-container {
         padding-top: 1.2rem !important;
         padding-bottom: 2rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
-        max-width: 500px !important; /* 모바일 앱 뷰 규격 */
+        max-width: 500px !important;
     }
 
     /* 콤팩트 히어로 배너 */
@@ -52,7 +52,7 @@ st.markdown("""
         border-radius: 18px;
         color: #FFFFFF !important;
         margin-bottom: 16px;
-        box-shadow: 0 8px 20px -4px rgba(255, 107, 107, 0.3);
+        box-shadow: 0 8px 20px -4px rgba(255, 107, 107, 0.25);
         text-align: center;
     }
     .hero-title {
@@ -70,7 +70,7 @@ st.markdown("""
         opacity: 0.95;
     }
 
-    /* 🏷️ 모바일 터치형 카테고리 칩 (stRadio) */
+    /* ☀️ 밝은 테마 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -79,8 +79,10 @@ st.markdown("""
         flex-wrap: wrap;
         margin-bottom: 10px;
     }
+    
+    /* 기본 (미선택) 버튼 스타일 */
     div[data-testid="stRadio"] label {
-        flex: 1 1 calc(50% - 6px) !important; /* 모바일 2열 정렬 */
+        flex: 1 1 calc(50% - 6px) !important;
         min-height: 44px !important;
         display: flex !important;
         align-items: center !important;
@@ -88,31 +90,44 @@ st.markdown("""
         border-radius: 12px !important;
         padding: 8px 12px !important;
         cursor: pointer;
-        font-weight: 700 !important;
+        font-weight: 600 !important;
         font-size: 13px !important;
-        border: 1px solid #334155 !important;
-        background: #1E293B !important;
-        color: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        background: #F8FAFC !important;
+        color: #334155 !important;
         text-align: center !important;
+        transition: all 0.2s ease;
     }
     div[data-testid="stRadio"] label p,
     div[data-testid="stRadio"] label span {
-        color: #F8FAFC !important;
-        font-weight: 700 !important;
+        color: #334155 !important;
+        font-weight: 600 !important;
         font-size: 13px !important;
     }
 
-    /* 📸 콤팩트 카드 컨테이너 */
+    /* 선택(Active) 상태 버튼 스타일 */
+    div[data-testid="stRadio"] label:has(input:checked) {
+        background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
+        border-color: #FF6B6B !important;
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3) !important;
+    }
+    div[data-testid="stRadio"] label:has(input:checked) p,
+    div[data-testid="stRadio"] label:has(input:checked) span {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+    }
+
+    /* 📸 화사한 밝은 카드 컨테이너 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 16px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2) !important;
-        background: #18181B !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        background: #FFFFFF !important;
         padding: 14px !important;
         margin-bottom: 14px !important;
     }
 
-    /* 📱 스와이프 힌트가 들어간 모바일 가로 슬라이더 */
+    /* 📱 모바일 가로 슬라이더 */
     .carousel-container {
         display: flex;
         overflow-x: auto;
@@ -120,22 +135,22 @@ st.markdown("""
         gap: 8px;
         padding-bottom: 4px;
         -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* 스크롤바 숨김으로 깔끔함 유지 */
+        scrollbar-width: none;
     }
     .carousel-container::-webkit-scrollbar {
         display: none;
     }
     .carousel-img {
-        flex: 0 0 78%; /* 78% 지정으로 다음 사진 피드가 오른쪽 살짝 보임 */
+        flex: 0 0 78%;
         max-width: 250px;
         aspect-ratio: 1 / 1;
         object-fit: cover;
         border-radius: 12px;
         scroll-snap-align: start;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
 
-    /* 🏷️ 인스타 감성 태그 뱃지 */
+    /* 🏷️ 파스텔톤 #해시태그 뱃지 */
     .tag-container {
         margin: 6px 0 10px 0;
         display: flex;
@@ -144,20 +159,21 @@ st.markdown("""
     }
     .tag-badge {
         display: inline-block;
-        background: #27272A;
-        color: #38BDF8;
+        background: #EFF6FF; /* 파스텔 블루 */
+        color: #1D4ED8;
         font-size: 11px;
         font-weight: 600;
-        padding: 3px 8px;
+        padding: 4px 9px;
         border-radius: 6px;
-        border: 1px solid #0284C7;
+        border: 1px solid #BFDBFE;
     }
     .tag-badge-sub {
-        color: #F472B6;
-        border-color: #DB2777;
+        background: #FFF1F2; /* 파스텔 로즈 */
+        color: #E11D48;
+        border-color: #FECDD3;
     }
 
-    /* 모바일 풀너비 터치 버튼 */
+    /* 모바일 버튼 터치 최적화 */
     div[data-testid="stButton"] button {
         width: 100% !important;
         min-height: 44px !important;
@@ -183,13 +199,14 @@ st.markdown("""
         margin-bottom: 6px;
     }
 
+    /* 일정 박스 스타일 */
     .plan-box {
-        background-color: #18181B;
-        border: 1px solid #27272A;
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
         border-radius: 14px;
         padding: 16px;
         margin-top: 12px;
-        color: #F4F4F5;
+        color: #1E293B;
         font-size: 14px;
     }
     </style>
@@ -241,7 +258,7 @@ DEFAULT_IMAGES = {
 }
 
 # -------------------------------------------------------------
-# 6. 전국 대응 동적 태그 & 슬라이더 HTML 생성기
+# 6. 태그 & 슬라이더 HTML 생성기
 # -------------------------------------------------------------
 def generate_tags(raw_category, address, title, location_name=""):
     tags = []
