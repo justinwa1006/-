@@ -36,15 +36,19 @@ st.markdown("""
         box-sizing: border-box;
     }
 
-    /* 📱 모바일 화면 여백 최적화 */
+    /* 🚫 Streamlit 기본 상단 메뉴바(헤더) 완전 숨김 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* 📱 모바일 화면 여백 최적화 (헤더 숨겼을 때의 상단 여백) */
     .block-container {
-        padding-top: 1.2rem !important;
+        padding-top: 1.8rem !important; /* 기존 여백을 줄여 잘림 방지 */
         padding-bottom: 2rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
         max-width: 500px !important;
     }
-
     /* 콤팩트 히어로 배너 */
     .hero-container {
         background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4834D4 100%);
