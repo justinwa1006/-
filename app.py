@@ -3,7 +3,9 @@ import requests
 import re
 import urllib.parse
 
+# -------------------------------------------------------------
 # 1. 페이지 레이아웃 설정
+# -------------------------------------------------------------
 st.set_page_config(
     page_title="TRIP LOG · 여행 가이드",
     page_icon="✈️",
@@ -11,13 +13,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# -------------------------------------------------------------
 # 2. 세션 스테이트 초기화
+# -------------------------------------------------------------
 if "itinerary" not in st.session_state:
     st.session_state.itinerary = []
 if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
-# 3. 여행 감성 커스텀 CSS (카드 & 대표 이미지 스타일)
+# -------------------------------------------------------------
+# 3. 여행 감성 커스텀 CSS (멀티 이미지 갤러리 슬라이더 추가)
+# -------------------------------------------------------------
 st.markdown("""
     <style>
     :root {
@@ -48,6 +54,7 @@ st.markdown("""
         }
     }
 
+    /* 히어로 배너 */
     .hero-container {
         background: linear-gradient(135deg, #0284C7 0%, #2563EB 50%, #4F46E5 100%);
         padding: 28px 24px;
@@ -69,7 +76,7 @@ st.markdown("""
         margin-top: 8px;
     }
 
-    /* 대분류 칩 커스텀 */
+    /* 대분류 라디오 ➔ 여행 칩(Chip) 커스텀 */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -90,25 +97,45 @@ st.markdown("""
         color: var(--text-primary) !important;
     }
 
-    /* 장소 카드 & 대표 사진 스타일 */
+    /* 장소 카드 스타일 */
     .place-card {
         background-color: var(--card-bg);
         border: 1px solid var(--card-border);
         border-radius: 16px;
         overflow: hidden;
-        margin-bottom: 18px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
         transition: transform 0.2s ease;
     }
     .place-card:hover {
         transform: translateY(-2px);
     }
-    .place-img {
-        width: 100%;
+
+    /* 멀티 사진 가로 스크롤 갤러리 */
+    .place-img-gallery {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 10px;
+        background-color: rgba(0, 0, 0, 0.02);
+        border-bottom: 1px solid var(--card-border);
+    }
+    .place-img-gallery::-webkit-scrollbar {
+        height: 6px;
+    }
+    .place-img-gallery::-webkit-scrollbar-thumb {
+        background: #CBD5E1;
+        border-radius: 10px;
+    }
+    .place-img-item {
+        flex: 0 0 78%;
         height: 180px;
         object-fit: cover;
-        display: block;
+        border-radius: 12px;
+        scroll-snap-align: start;
     }
+
     .place-content {
         padding: 16px 20px;
     }
@@ -151,6 +178,7 @@ st.markdown("""
         box-shadow: 0 2px 6px rgba(3, 199, 90, 0.2);
     }
 
+    /* 일정 박스 */
     .plan-box {
         background-color: var(--plan-bg);
         border: 1px solid var(--plan-border);
@@ -161,7 +189,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# -------------------------------------------------------------
 # 4. API 인증 설정 (Secrets 우선 적용)
+# -------------------------------------------------------------
 client_id = st.secrets.get("NAVER_CLIENT_ID", "")
 client_secret = st.secrets.get("NAVER_CLIENT_SECRET", "")
 
@@ -171,7 +201,9 @@ if not client_id or not client_secret:
         client_id = st.text_input("Naver Client ID", type="password")
         client_secret = st.text_input("Naver Client Secret", type="password")
 
+# -------------------------------------------------------------
 # 5. 상단 헤더
+# -------------------------------------------------------------
 st.markdown("""
     <div class="hero-container">
         <div class="hero-title">✈️ TRIP LOG</div>
@@ -182,7 +214,7 @@ st.markdown("""
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 예비 감성 대표 이미지 URL 모음
+# 예비 이미지
 DEFAULT_IMAGES = {
     "🍽️ 맛집": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
     "☕ 카페": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
@@ -190,25 +222,54 @@ DEFAULT_IMAGES = {
     "🌙 야경": "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=80"
 }
 
-# 네이버 이미지 검색 API로 실제 장소 사진 가져오기
-def get_place_image(location, place_title, category_key, client_id, client_secret):
+# -------------------------------------------------------------
+# 6. API 캐싱 처리 함수
+# -------------------------------------------------------------
+@st.cache_data(ttl=3600)
+def fetch_naver_search(query, c_id, c_secret):
+    """장소 검색 API (1시간 동안 캐싱)"""
+    url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
+    headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
+    params1 = {"query": query, "display": 5, "start": 1, "sort": "comment"}
+    params2 = {"query": query, "display": 5, "start": 6, "sort": "comment"}
+    items = []
+    try:
+        res1 = requests.get(url, headers=headers, params=params1)
+        res2 = requests.get(url, headers=headers, params=params2)
+        if res1.status_code == 200:
+            items.extend(res1.json().get("items", []))
+        if res2.status_code == 200:
+            items.extend(res2.json().get("items", []))
+    except Exception:
+        pass
+    return items
+
+@st.cache_data(ttl=3600)
+def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=4):
+    """이미지 검색 API (인기 대표 사진 4장 불러오기)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
-    headers = {
-        "X-NCP-APIGW-API-KEY-ID": client_id,
-        "X-NCP-APIGW-API-KEY": client_secret
-    }
-    params = {"query": f"{location} {place_title}", "display": 1, "sort": "sim"}
+    headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
+    params = {"query": f"{location_name} {place_title}", "display": display_count, "sort": "sim"}
+    img_list = []
     try:
         res = requests.get(url, headers=headers, params=params)
         if res.status_code == 200:
             items = res.json().get("items", [])
-            if items:
-                return items[0].get("link") or items[0].get("thumbnail")
-    except:
+            for item in items:
+                link = item.get("link") or item.get("thumbnail")
+                if link:
+                    img_list.append(link)
+    except Exception:
         pass
-    return DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
 
-# 6. 파이썬 자체 동선 정렬 함수
+    if not img_list:
+        img_list = [DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])]
+
+    return img_list
+
+# -------------------------------------------------------------
+# 7. 최적 동선 정렬 함수
+# -------------------------------------------------------------
 def generate_smart_schedule(itinerary_list):
     meals, cafes, spots, nights, others = [], [], [], [], []
 
@@ -259,11 +320,13 @@ def generate_smart_schedule(itinerary_list):
 
     return plan_md
 
-# 7. 탭 구성
+# -------------------------------------------------------------
+# 8. 탭 구성
+# -------------------------------------------------------------
 tab1, tab2 = st.tabs(["🧭 장소 탐색", f"🗓️ 나의 일정표 ({len(st.session_state.itinerary)})"])
 
 # -------------------------------------------------------------
-# TAB 1: 장소 검색 & 결과
+# TAB 1: 장소 검색 & 멀티 카드 노출
 # -------------------------------------------------------------
 with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
@@ -284,75 +347,60 @@ with tab1:
 
     if location:
         if not client_id or not client_secret:
-            st.info("💡 왼쪽 사이드바에 Naver API Client ID와 Secret을 입력해 주세요.")
+            st.info("💡 사이드바 또는 Streamlit Secrets에 Naver API Key를 설정해 주세요.")
         else:
-            url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
-            headers = {
-                "X-NCP-APIGW-API-KEY-ID": client_id,
-                "X-NCP-APIGW-API-KEY": client_secret
-            }
-            
             clean_category = category.split()[-1]
             query = f"{location} {subcategory}" if subcategory != "전체" else f"{location} {clean_category}"
             
-            params1 = {"query": query, "display": 5, "start": 1, "sort": "comment"}
-            params2 = {"query": query, "display": 5, "start": 6, "sort": "comment"}
-
-            try:
-                res1 = requests.get(url, headers=headers, params=params1)
-                res2 = requests.get(url, headers=headers, params=params2)
+            items = fetch_naver_search(query, client_id, client_secret)
+            
+            if items:
+                st.write("")
+                st.markdown(f"#### 🔍 **{location}** 인기 {query.replace(location, '').strip()} TOP {len(items)}")
                 
-                items = []
-                if res1.status_code == 200:
-                    items.extend(res1.json().get("items", []))
-                if res2.status_code == 200:
-                    items.extend(res2.json().get("items", []))
+                for idx, item in enumerate(items, 1):
+                    title = clean_html(item.get("title", ""))
+                    address = item.get("roadAddress") or item.get("address", "")
+                    cat = item.get("category", "")
                     
-                if items:
-                    st.write("")
-                    st.markdown(f"#### 🔍 **{location}** 인기 {query.replace(location, '').strip()} TOP {len(items)}")
+                    # 장소별 인기 사진 4장 불러오기
+                    img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=4)
+                    map_query = urllib.parse.quote(f"{location} {title}")
+                    map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
-                    for idx, item in enumerate(items, 1):
-                        title = clean_html(item.get("title", ""))
-                        address = item.get("roadAddress") or item.get("address", "")
-                        cat = item.get("category", "")
-                        
-                        # 대표 사진 및 지도 URL 가져오기
-                        img_url = get_place_image(location, title, category, client_id, client_secret)
-                        map_query = urllib.parse.quote(f"{location} {title}")
-                        map_url = f"https://map.naver.com/v5/search/{map_query}"
-                        
-                        # 대표 사진 + 네이버 지도 버튼 포함 카드 레이아웃
-                        st.markdown(f"""
-                            <div class="place-card">
-                                <img src="{img_url}" class="place-img" alt="{title}">
-                                <div class="place-content">
-                                    <span class="place-badge">TOP {idx}</span>
-                                    <div class="place-title">{title}</div>
-                                    <div class="place-category">🏷️ {cat}</div>
-                                    <div class="place-address">📍 {address}</div>
-                                    <a href="{map_url}" target="_blank" class="map-btn">
-                                        네이버 지도로 위치 확인 ↗
-                                    </a>
-                                </div>
+                    # 갤러리 HTML 태그 생성
+                    gallery_html = "".join([f'<img src="{img}" class="place-img-item" alt="{title}">' for img in img_urls])
+                    
+                    st.markdown(f"""
+                        <div class="place-card">
+                            <div class="place-img-gallery">
+                                {gallery_html}
                             </div>
-                        """, unsafe_allow_html=True)
-                        
-                        place_info = {"title": title, "address": address, "category": cat}
-                        if st.button(f"➕ '{title}' 일정에 담기", key=f"add_{idx}_{title}"):
-                            if place_info not in st.session_state.itinerary:
-                                st.session_state.itinerary.append(place_info)
-                                st.toast(f"✅ '{title}' 장소가 일정표에 추가되었습니다!")
-                                st.rerun()
-                            else:
-                                st.toast(f"⚠️ 이미 일정에 담긴 장소입니다.")
-                else:
-                    st.warning("검색 결과가 없습니다.")
-            except Exception as e:
-                st.error(f"요청 중 오류가 발생했습니다: {e}")
+                            <div class="place-content">
+                                <span class="place-badge">TOP {idx}</span>
+                                <div class="place-title">{title}</div>
+                                <div class="place-category">🏷️ {cat}</div>
+                                <div class="place-address">📍 {address}</div>
+                                <a href="{map_url}" target="_blank" class="map-btn">
+                                    네이버 지도로 위치 확인 ↗
+                                </a>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    place_info = {"title": title, "address": address, "category": cat}
+                    if st.button(f"➕ '{title}' 일정에 담기", key=f"add_{idx}_{title}"):
+                        if place_info not in st.session_state.itinerary:
+                            st.session_state.itinerary.append(place_info)
+                            st.toast(f"✅ '{title}' 장소가 일정표에 추가되었습니다!")
+                            st.rerun()
+                        else:
+                            st.toast(f"⚠️ 이미 일정에 담긴 장소입니다.")
+            else:
+                st.warning("검색 결과가 없습니다.")
 
 # -------------------------------------------------------------
-# TAB 2: 담은 일정 & 동선 생성
+# TAB 2: 담은 일정 & 1초 동선 생성
 # -------------------------------------------------------------
 with tab2:
     if st.session_state.itinerary:
