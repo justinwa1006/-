@@ -22,7 +22,7 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 커스텀 CSS (다크모드 대응 + 태그 뱃지 스타일 개선)
+# 3. 커스텀 CSS (모바일 슬라이더 + 다크모드 대응)
 # -------------------------------------------------------------
 st.markdown("""
     <meta name="referrer" content="no-referrer">
@@ -98,26 +98,36 @@ st.markdown("""
         margin-bottom: 18px !important;
     }
 
-    /* 🖼️ 1:1 고화질 이미지 피드 */
-    div[data-testid="stColumn"] div[data-testid="stImage"] {
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
-        background-color: #27272A !important;
+    /* 📱 모바일 가로 터치 스와이프 슬라이더 CSS */
+    .carousel-container {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 10px;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
     }
-
-    div[data-testid="stColumn"] div[data-testid="stImage"] img {
-        aspect-ratio: 1 / 1 !important;
-        width: 100% !important;
-        height: auto !important;
-        object-fit: cover !important;
-        border-radius: 12px !important;
-        transition: transform 0.3s ease, filter 0.3s ease !important;
+    .carousel-container::-webkit-scrollbar {
+        height: 4px;
     }
-
-    div[data-testid="stColumn"] div[data-testid="stImage"]:hover img {
-        transform: scale(1.06) !important;
-        filter: brightness(1.05) !important;
+    .carousel-container::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 10px;
+    }
+    .carousel-img {
+        flex: 0 0 72%;
+        max-width: 260px;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 14px;
+        scroll-snap-align: start;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        transition: transform 0.2s ease;
+    }
+    .carousel-img:active {
+        transform: scale(0.98);
     }
 
     /* 🏷️ 다채로운 인스타 감성 태그 뱃지 */
@@ -218,34 +228,39 @@ DEFAULT_IMAGES = {
 }
 
 # -------------------------------------------------------------
-# 6. 스마트 동적 해시태그 생성기
+# 6. 전국 대응 동적 태그 & 슬라이더 HTML 생성기
 # -------------------------------------------------------------
-def generate_tags(raw_category, address, title):
-    """지루한 단일 태그 대신 동네/카테고리 기반 인스타 태그 자동 구성"""
+def generate_tags(raw_category, address, title, location_name=""):
+    """검색한 도시/지역명에 따라 맞춤형 인스타 태그 동적 생성"""
     tags = []
     
-    # 1. 동네/지역 태그 추출 (예: 애월읍 -> #애월, 서귀포시 -> #서귀포)
-    addr_match = re.search(r'([가-힣]+(?:읍|면|동|리|시))', address)
+    # 1. 주소에서 세부 동네 추출 (예: 애월읍 -> #애월핫플, 해운대구 -> #해운대핫플)
+    addr_match = re.search(r'([가-힣]+(?:읍|면|동|리|구|시))', address)
     if addr_match:
-        loc_tag = addr_match.group(1).replace('특별자치도', '').replace('시', '').replace('읍', '').replace('면', '')
+        loc_tag = addr_match.group(1).replace('특별자치도', '').replace('광역시', '').replace('특별시', '').replace('시', '').replace('구', '').replace('읍', '').replace('면', '')
         if len(loc_tag) >= 2:
             tags.append(f"#{loc_tag}핫플")
 
-    # 2. 세부 카테고리 태그 분리 (예: 음식점>한식>육류 -> #한식, #육류)
+    # 2. 세부 카테고리 태그 분리
     cat_parts = [p.strip() for p in raw_category.split('>') if p.strip()]
     for part in cat_parts:
         if part not in ["음식점", "카페,디저트", "여행,명소", "관광,명소"]:
             tags.append(f"#{part}")
 
-    # 3. 감성 보충 태그
+    # 3. 검색 지역명 정리 (예: "부산광역시" -> "부산", "제주도" -> "제주")
+    clean_loc = re.sub(r'(특별자치도|광역시|특별시|자치도|시|도)$', '', location_name.strip())
+    if not clean_loc:
+        clean_loc = location_name.strip()
+
+    # 4. 장소 성격 및 지역 맞춤형 태그 조합
     if "카페" in raw_category or "디저트" in raw_category:
         tags.extend(["#오션뷰", "#감성카페"])
     elif "음식점" in raw_category:
-        tags.extend(["#제주맛집", "#식도락"])
+        tags.extend([f"#{clean_loc}맛집" if clean_loc else "#지역맛집", "#식도락"])
     else:
-        tags.extend(["#인생샷", "#제주여행"])
+        tags.extend(["#인생샷", f"#{clean_loc}여행" if clean_loc else "#국내여행"])
 
-    # 중복 제거 및 최대 4개 추출
+    # 중복 제거 및 최대 4개 정렬
     unique_tags = list(dict.fromkeys(tags))[:4]
     
     html = '<div class="tag-container">'
@@ -255,12 +270,19 @@ def generate_tags(raw_category, address, title):
     html += '</div>'
     return html
 
+def generate_carousel_html(img_urls):
+    """모바일 스와이프 슬라이더 HTML 구성"""
+    html = '<div class="carousel-container">'
+    for url in img_urls:
+        html += f'<img src="{url}" class="carousel-img" alt="place_img" loading="lazy"/>'
+    html += '</div>'
+    return html
+
 # -------------------------------------------------------------
 # 7. API 캐싱 처리 함수
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_naver_search(query, c_id, c_secret):
-    """장소 검색 API (15개 상위 장소 수집)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     items = []
@@ -279,7 +301,6 @@ def fetch_naver_search(query, c_id, c_secret):
 
 @st.cache_data(ttl=3600)
 def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
-    """고화질 원본 이미지 수집"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     params = {"query": f"{location_name} {place_title}", "display": display_count * 2, "sort": "sim"}
@@ -364,7 +385,6 @@ tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len
 with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="제주도", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
 
-    # 제주도 세부 지역 필터
     sub_area = "전체"
     if "제주" in location:
         sub_area = st.selectbox("🏝️ 제주 세부 지역 선택", ["전체", "애월/한림", "서귀포/중문", "성산/구좌", "제주시/조천"])
@@ -390,7 +410,7 @@ with tab1:
             clean_category = category.split()[-1]
             
             search_location = location
-            if sub_area != "전체":
+            if "제주" in location and sub_area != "전체":
                 search_location = f"제주 {sub_area.split('/')[0]}"
             
             query = f"{search_location} {subcategory}" if subcategory != "전체" else f"{search_location} {clean_category}"
@@ -411,19 +431,14 @@ with tab1:
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 1:1 이미지 피드
-                        for row in range(2):
-                            img_cols = st.columns(3)
-                            for c_idx in range(3):
-                                img_idx = row * 3 + c_idx
-                                if img_idx < len(img_urls):
-                                    img_cols[c_idx].image(img_urls[img_idx], use_container_width=True)
+                        # 📱 모바일 최적화 좌우 스와이프 이미지 슬라이더
+                        st.markdown(generate_carousel_html(img_urls), unsafe_allow_html=True)
                         
                         st.write("")
                         st.markdown(f"### **{idx}. {title}**")
                         
-                        # ✨ 개선된 동적 해시태그 바
-                        st.markdown(generate_tags(raw_cat, address, title), unsafe_allow_html=True)
+                        # ✨ 전국 대응 동적 태그 생성
+                        st.markdown(generate_tags(raw_cat, address, title, location_name=search_location), unsafe_allow_html=True)
                         
                         st.caption(f"📍 {address}")
                         
