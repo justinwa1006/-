@@ -299,51 +299,33 @@ def generate_carousel_html(img_urls):
     return html
 
 # -------------------------------------------------------------
-# 7. API 캐싱 처리 함수 (🎯 TOP 10 제한 수정)
+# 7. API 캐싱 처리 함수 (🎯 TOP 10 1회 호출 & 중복 제거)
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_naver_search(query, c_id, c_secret):
     url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
-    items = []
-    # 5개씩 2회 호출하여 정확히 최대 10개만 수집
-    for start in [1, 6]:
-        params = {"query": query, "display": 5, "start": start, "sort": "comment"}
-        try:
-            res = requests.get(url, headers=headers, params=params)
-            if res.status_code == 200:
-                fetched = res.json().get("items", [])
-                if not fetched:
-                    break
-                items.extend(fetched)
-        except Exception:
-            break
-    return items[:10]
-
-@st.cache_data(ttl=3600)
-def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
-    url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
-    headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
-    params = {"query": f"{location_name} {place_title}", "display": display_count * 2, "sort": "sim"}
-    img_list = []
+    # display=10으로 1번에 10개 요청
+    params = {"query": query, "display": 10, "start": 1, "sort": "comment"}
+    
     try:
         res = requests.get(url, headers=headers, params=params)
         if res.status_code == 200:
             items = res.json().get("items", [])
+            
+            # 상호명(title) 기준 중복 제거
+            seen_titles = set()
+            unique_items = []
             for item in items:
-                link = item.get("link") or item.get("thumbnail")
-                if link and link.startswith("http"):
-                    img_list.append(link)
+                clean_title = clean_html(item.get("title", ""))
+                if clean_title not in seen_titles:
+                    seen_titles.add(clean_title)
+                    unique_items.append(item)
+                    
+            return unique_items
     except Exception:
         pass
-
-    fallbacks = DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
-    fb_idx = 0
-    while len(img_list) < display_count:
-        img_list.append(fallbacks[fb_idx % len(fallbacks)])
-        fb_idx += 1
-
-    return img_list[:display_count]
+    return []
 
 # -------------------------------------------------------------
 # 8. 동선 정렬 함수
