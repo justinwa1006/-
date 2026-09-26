@@ -22,7 +22,7 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (6장 앨범 그리드 & 비율 고정 스타일)
+# 3. 여행 감성 커스텀 CSS (썸네일 크롭 & 확대 모드 예외 처리)
 # -------------------------------------------------------------
 st.markdown("""
     <!-- 외부 이미지 리퍼러 보안 차단 해제 -->
@@ -68,12 +68,24 @@ st.markdown("""
         font-size: 14px !important;
     }
 
-    /* 📸 6장 갤러리: 컬럼 내 이미지 높이 고정 및 비율 자동 크롭 */
-    div[data-testid="stColumn"] img {
+    /* 📸 카드 목록 썸네일: 높이 110px 고정 */
+    div[data-testid="stColumn"] div[data-testid="stImage"] img {
         height: 110px !important;
         object-fit: cover !important;
         width: 100% !important;
         border-radius: 8px !important;
+    }
+
+    /* 🔍 사진 클릭 확대(전체화면) 시: 원본 비율 및 정상 크기로 복원 */
+    *:fullscreen img,
+    div[data-testid="stImage"]:fullscreen img,
+    div[data-testid="stImage"] img:fullscreen {
+        height: auto !important;
+        max-height: 85vh !important;
+        width: auto !important;
+        max-width: 90vw !important;
+        object-fit: contain !important;
+        border-radius: 0px !important;
     }
 
     /* 네이버 지도 버튼 */
@@ -293,7 +305,6 @@ with tab1:
                     address = item.get("roadAddress") or item.get("address", "")
                     cat = item.get("category", "")
                     
-                    # 장소별 인기 대표 사진 6장 로드
                     img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=6)
                     map_query = urllib.parse.quote(f"{location} {title}")
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
