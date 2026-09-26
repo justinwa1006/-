@@ -22,33 +22,41 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (썸네일 크롭 & 확대 모드 예외 처리)
+# 3. 여행 감성 커스텀 CSS (인스타그램/네이버 플레이스 스타일)
 # -------------------------------------------------------------
 st.markdown("""
     <!-- 외부 이미지 리퍼러 보안 차단 해제 -->
     <meta name="referrer" content="no-referrer">
 
     <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+    * {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
     /* 히어로 배너 */
     .hero-container {
-        background: linear-gradient(135deg, #0284C7 0%, #2563EB 50%, #4F46E5 100%);
-        padding: 24px;
-        border-radius: 18px;
+        background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4834D4 100%);
+        padding: 28px 20px;
+        border-radius: 22px;
         color: #FFFFFF !important;
-        margin-bottom: 20px;
-        box-shadow: 0 10px 18px -5px rgba(37, 99, 235, 0.3);
+        margin-bottom: 24px;
+        box-shadow: 0 12px 28px -6px rgba(255, 107, 107, 0.35);
         text-align: center;
     }
     .hero-title {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 900;
+        letter-spacing: -0.5px;
         margin: 0;
         color: #FFFFFF !important;
     }
     .hero-subtitle {
         font-size: 13px;
-        color: #E0F2FE !important;
+        color: #FFEAA7 !important;
         margin-top: 6px;
+        font-weight: 500;
     }
 
     /* 대분류 라디오 ➔ 여행 칩(Chip) 커스텀 */
@@ -61,52 +69,97 @@ st.markdown("""
         margin-bottom: 12px;
     }
     div[data-testid="stRadio"] label {
-        border-radius: 12px !important;
-        padding: 8px 14px !important;
+        border-radius: 20px !important;
+        padding: 8px 16px !important;
         cursor: pointer;
         font-weight: 600 !important;
         font-size: 14px !important;
+        border: 1px solid #E2E8F0 !important;
+        background: #F8FAFC !important;
+        transition: all 0.2s ease !important;
     }
 
-    /* 📸 카드 목록 썸네일: 높이 110px 고정 */
+    /* 📸 카드 컨테이너 (인스타/네이버 플레이스 감성) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 20px !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01) !important;
+        background: #FFFFFF !important;
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* 🖼️ 이미지 마스크 & 호버 모션 */
+    div[data-testid="stColumn"] div[data-testid="stImage"] {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
+    
     div[data-testid="stColumn"] div[data-testid="stImage"] img {
-        height: 110px !important;
+        height: 120px !important;
         object-fit: cover !important;
         width: 100% !important;
-        border-radius: 8px !important;
+        border-radius: 12px !important;
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.35s ease !important;
     }
 
-    /* 🔍 사진 클릭 확대(전체화면) 시: 원본 비율 및 정상 크기로 복원 */
-    *:fullscreen img,
-    div[data-testid="stImage"]:fullscreen img,
-    div[data-testid="stImage"] img:fullscreen {
+    /* 인스타 피드 호버 효과 */
+    div[data-testid="stColumn"] div[data-testid="stImage"]:hover img {
+        transform: scale(1.08) !important;
+        filter: brightness(1.03) !important;
+    }
+
+    /* 🔍 모달 팝업(사진 확대 시) 원본 비율 복원 */
+    div[role="dialog"] img,
+    div[data-baseweb="modal"] img,
+    div[data-testid="stModal"] img,
+    div[data-testid="stDialog"] img {
         height: auto !important;
-        max-height: 85vh !important;
+        max-height: 80vh !important;
         width: auto !important;
-        max-width: 90vw !important;
+        max-width: 100% !important;
         object-fit: contain !important;
-        border-radius: 0px !important;
+        border-radius: 12px !important;
+    }
+
+    /* 감성 뱃지 & 해시태그 스타일 */
+    .tag-badge {
+        display: inline-block;
+        background: #F1F5F9;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-right: 4px;
     }
 
     /* 네이버 지도 버튼 */
     .map-btn {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         background-color: #03C75A;
         color: #FFFFFF !important;
         font-size: 13px;
         font-weight: 700;
-        padding: 6px 14px;
-        border-radius: 8px;
+        padding: 8px 16px;
+        border-radius: 10px;
         text-decoration: none !important;
+        box-shadow: 0 4px 10px rgba(3, 199, 90, 0.25);
+        transition: transform 0.15s ease;
+    }
+    .map-btn:hover {
+        transform: translateY(-1px);
     }
 
     /* 일정 출력 박스 */
     .plan-box {
-        background-color: rgba(3, 105, 161, 0.05);
-        border: 1px solid rgba(3, 105, 161, 0.2);
-        border-radius: 16px;
-        padding: 20px;
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 18px;
+        padding: 22px;
         margin-top: 16px;
     }
     </style>
@@ -129,8 +182,8 @@ if not client_id or not client_secret:
 # -------------------------------------------------------------
 st.markdown("""
     <div class="hero-container">
-        <div class="hero-title">✈️ TRIP LOG</div>
-        <div class="hero-subtitle">나만의 실시간 여행 가이드 & 최적 동선 플래너</div>
+        <div class="hero-title">✨ TRIP LOG</div>
+        <div class="hero-subtitle">인스타 감성 핫플 탐색 & 스마트 감성 코스 플래너</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -265,10 +318,10 @@ def generate_smart_schedule(itinerary_list):
 # -------------------------------------------------------------
 # 8. 탭 구성
 # -------------------------------------------------------------
-tab1, tab2 = st.tabs(["🧭 장소 탐색", f"🗓️ 나의 일정표 ({len(st.session_state.itinerary)})"])
+tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len(st.session_state.itinerary)})"])
 
 # -------------------------------------------------------------
-# TAB 1: 장소 검색 & 6장 앨범 그리드 카드
+# TAB 1: 장소 검색 & 인스타 감성 카드
 # -------------------------------------------------------------
 with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
@@ -298,7 +351,7 @@ with tab1:
             
             if items:
                 st.write("")
-                st.markdown(f"#### 🔍 **{location}** 인기 {query.replace(location, '').strip()} TOP {len(items)}")
+                st.markdown(f"#### 📸 **{location}** 인기 {query.replace(location, '').strip()} TOP {len(items)}")
                 
                 for idx, item in enumerate(items, 1):
                     title = clean_html(item.get("title", ""))
@@ -310,7 +363,7 @@ with tab1:
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 🖼️ 2행 3열 (3장씩 2줄) 갤러리 그리드
+                        # 🖼️ 2행 3열 인스타 감성 갤러리 그리드
                         for row in range(2):
                             img_cols = st.columns(3)
                             for c_idx in range(3):
@@ -320,14 +373,15 @@ with tab1:
                         
                         st.write("")
                         st.markdown(f"### **{idx}. {title}**")
-                        st.caption(f"🏷️ **{cat}** | 📍 {address}")
+                        st.markdown(f'<span class="tag-badge">#{cat}</span> <span class="tag-badge">#{location}핫플</span>', unsafe_allow_html=True)
+                        st.caption(f"📍 {address}")
                         
                         col_map, col_add = st.columns([1.5, 1])
                         with col_map:
-                            st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🗺️ 네이버 지도로 위치 확인 ↗</a>', unsafe_allow_html=True)
+                            st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>', unsafe_allow_html=True)
                         with col_add:
                             place_info = {"title": title, "address": address, "category": cat}
-                            if st.button(f"➕ 일정에 담기", key=f"add_{idx}_{title}"):
+                            if st.button(f"➕ 일정 담기", key=f"add_{idx}_{title}"):
                                 if place_info not in st.session_state.itinerary:
                                     st.session_state.itinerary.append(place_info)
                                     st.toast(f"✅ '{title}' 일정에 추가되었습니다!")
@@ -379,4 +433,4 @@ with tab2:
         st.text_area("📋 일정 텍스트 복사 (카톡/메모장 공유용)", value=itinerary_text, height=120)
 
     else:
-        st.info("💡 **'🧭 장소 탐색'** 탭에서 마음에 드는 장소의 **'➕ 일정에 담기'** 버튼을 눌러 나만의 코스를 담아보세요!")
+        st.info("💡 **'🧭 감성 핫플 탐색'** 탭에서 마음에 드는 장소의 **'➕ 일정 담기'** 버튼을 눌러 나만의 코스를 담아보세요!")
