@@ -22,7 +22,7 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (인스타 1:1 피드 + 전체화면 확대 대응)
+# 3. 여행 감성 커스텀 CSS (다크모드 완벽 대응 + 고화질 피드)
 # -------------------------------------------------------------
 st.markdown("""
     <!-- 외부 이미지 리퍼러 보안 차단 해제 -->
@@ -59,7 +59,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* 대분류 라디오 ➔ 여행 칩(Chip) 커스텀 */
+    /* 🏷️ 다크모드 대응 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -70,30 +70,41 @@ st.markdown("""
     }
     div[data-testid="stRadio"] label {
         border-radius: 20px !important;
-        padding: 8px 16px !important;
+        padding: 8px 18px !important;
         cursor: pointer;
         font-weight: 600 !important;
         font-size: 14px !important;
-        border: 1px solid #E2E8F0 !important;
-        background: #F8FAFC !important;
+        border: 1px solid #334155 !important;
+        background: #1E293B !important;
+        color: #F8FAFC !important;
         transition: all 0.2s ease !important;
     }
-
-    /* 📸 카드 컨테이너 (인스타/네이버 플레이스 감성) */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 20px !important;
-        border: 1px solid rgba(226, 232, 240, 0.8) !important;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01) !important;
-        background: #FFFFFF !important;
-        padding: 16px !important;
-        margin-bottom: 16px !important;
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span {
+        color: #F8FAFC !important;
+        font-weight: 600 !important;
+    }
+    div[data-testid="stRadio"] label:hover {
+        background: #334155 !important;
+        border-color: #64748B !important;
     }
 
-    /* 🖼️ 1. 인스타 갤러리 피드 (1:1 정사각형 통일 & 호버 효과) */
+    /* 📸 카드 컨테이너 (다크/라이트 호환 스타일) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 20px !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25) !important;
+        background: #18181B !important;
+        padding: 18px !important;
+        margin-bottom: 18px !important;
+    }
+
+    /* 🖼️ 1:1 정사각형 고화질 인스타 피드 그리드 */
     div[data-testid="stColumn"] div[data-testid="stImage"] {
         border-radius: 12px !important;
         overflow: hidden !important;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06) !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+        background-color: #27272A !important;
     }
 
     div[data-testid="stColumn"] div[data-testid="stImage"] img {
@@ -108,10 +119,10 @@ st.markdown("""
     /* 인스타 피드 호버 효과 */
     div[data-testid="stColumn"] div[data-testid="stImage"]:hover img {
         transform: scale(1.06) !important;
-        filter: brightness(1.03) !important;
+        filter: brightness(1.05) !important;
     }
 
-    /* 🔍 2. 전체화면(확대) 클릭 시 원본 비율 & 시원한 크기 복원 */
+    /* 🔍 전체화면(확대) 클릭 시 원본 비율 복원 */
     div[data-testid="stStyledFullScreenFrame"] img,
     div[role="dialog"] img,
     div[data-testid="stModal"] img,
@@ -128,13 +139,14 @@ st.markdown("""
     /* 감성 뱃지 & 해시태그 스타일 */
     .tag-badge {
         display: inline-block;
-        background: #F1F5F9;
-        color: #475569;
-        font-size: 11px;
-        font-weight: 700;
-        padding: 3px 8px;
-        border-radius: 6px;
-        margin-right: 4px;
+        background: #27272A;
+        color: #E4E4E7;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 8px;
+        margin-right: 6px;
+        border: 1px solid #3F3F46;
     }
 
     /* 네이버 지도 버튼 */
@@ -158,11 +170,12 @@ st.markdown("""
 
     /* 일정 출력 박스 */
     .plan-box {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
+        background-color: #18181B;
+        border: 1px solid #27272A;
         border-radius: 18px;
         padding: 22px;
         margin-top: 16px;
+        color: #F4F4F5;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -192,27 +205,27 @@ st.markdown("""
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 고화질 대표 예비 이미지 목록 (정사각형 크롭 대응)
+# 고화질 백업 이미지 목록
 DEFAULT_IMAGES = {
     "🍽️ 맛집": [
-        "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
-        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80",
-        "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&q=80"
+        "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1000&q=85",
+        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1000&q=85",
+        "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=1000&q=85"
     ],
     "☕ 카페": [
-        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
-        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80"
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1000&q=85",
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1000&q=85",
+        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1000&q=85"
     ],
     "🏞️ 관광지": [
-        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
-        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80",
-        "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=80"
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1000&q=85",
+        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1000&q=85",
+        "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1000&q=85"
     ],
     "🌙 야경": [
-        "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=80",
-        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&q=80",
-        "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=600&q=80"
+        "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1000&q=85",
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1000&q=85",
+        "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1000&q=85"
     ]
 }
 
@@ -240,18 +253,19 @@ def fetch_naver_search(query, c_id, c_secret):
 
 @st.cache_data(ttl=3600)
 def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
-    """이미지 검색 API (인기 대표 사진 6장 가져오기)"""
+    """이미지 검색 API (고화질 원본 link 우선 가져오기)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
-    params = {"query": f"{location_name} {place_title}", "display": display_count, "sort": "sim"}
+    params = {"query": f"{location_name} {place_title}", "display": display_count * 2, "sort": "sim"}
     img_list = []
     try:
         res = requests.get(url, headers=headers, params=params)
         if res.status_code == 200:
             items = res.json().get("items", [])
             for item in items:
-                link = item.get("thumbnail") or item.get("link")
-                if link:
+                # 저화질 thumbnail 대신 고화질 원본 link 적용
+                link = item.get("link") or item.get("thumbnail")
+                if link and link.startswith("http"):
                     img_list.append(link)
     except Exception:
         pass
@@ -365,7 +379,7 @@ with tab1:
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 🖼️ 1:1 정사각형 인스타 피드 그리드 (2행 3열)
+                        # 🖼️ 1:1 고화질 피드 그리드 (2행 3열)
                         for row in range(2):
                             img_cols = st.columns(3)
                             for c_idx in range(3):
