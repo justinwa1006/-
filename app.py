@@ -17,12 +17,9 @@ if "itinerary" not in st.session_state:
 if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
-# 3. 여행 감성 커스텀 CSS
+# 3. 여행 감성 커스텀 CSS (카드 & 대표 이미지 스타일)
 st.markdown("""
     <style>
-    /* --------------------------------------------------
-       테마 변수 설정 (라이트 / 다크)
-    -------------------------------------------------- */
     :root {
         --bg-color: #F8FAFC;
         --card-bg: #FFFFFF;
@@ -32,9 +29,6 @@ st.markdown("""
         --text-address: #334155;
         --badge-bg: #E0F2FE;
         --badge-text: #0369A1;
-        --chip-bg: #F1F5F9;
-        --chip-active: #2563EB;
-        --chip-active-text: #FFFFFF;
         --plan-bg: #F0F9FF;
         --plan-border: #BAE6FD;
     }
@@ -49,17 +43,11 @@ st.markdown("""
             --text-address: #CBD5E1;
             --badge-bg: #0369A1;
             --badge-text: #E0F2FE;
-            --chip-bg: #334155;
-            --chip-active: #3B82F6;
-            --chip-active-text: #FFFFFF;
             --plan-bg: #0F172A;
             --plan-border: #1E3A8A;
         }
     }
 
-    /* --------------------------------------------------
-       상단 여행 히어로 배너
-    -------------------------------------------------- */
     .hero-container {
         background: linear-gradient(135deg, #0284C7 0%, #2563EB 50%, #4F46E5 100%);
         padding: 28px 24px;
@@ -72,7 +60,6 @@ st.markdown("""
     .hero-title {
         font-size: 24px;
         font-weight: 900;
-        letter-spacing: -0.5px;
         margin: 0;
         color: #FFFFFF !important;
     }
@@ -80,15 +67,10 @@ st.markdown("""
         font-size: 13px;
         color: #E0F2FE !important;
         margin-top: 8px;
-        font-weight: 500;
     }
 
-    /* --------------------------------------------------
-       대분류 라디오 버튼 ➔ 여행 감성 칩(Chip) 커스텀
-    -------------------------------------------------- */
-    div[data-testid="stRadio"] > label {
-        display: none !important; /* 기본 라디오 헤더 숨기기 */
-    }
+    /* 대분류 칩 커스텀 */
+    div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
         flex-direction: row;
@@ -106,28 +88,29 @@ st.markdown("""
         font-weight: 600 !important;
         font-size: 14px !important;
         color: var(--text-primary) !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-    }
-    div[data-testid="stRadio"] label:hover {
-        border-color: #3B82F6 !important;
-        transform: translateY(-2px);
     }
 
-    /* --------------------------------------------------
-       장소 추천 카드 스타일
-    -------------------------------------------------- */
+    /* 장소 카드 & 대표 사진 스타일 */
     .place-card {
         background-color: var(--card-bg);
         border: 1px solid var(--card-border);
         border-radius: 16px;
-        padding: 18px 20px;
-        margin-bottom: 14px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        overflow: hidden;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        transition: transform 0.2s ease;
     }
     .place-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+    }
+    .place-img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        display: block;
+    }
+    .place-content {
+        padding: 16px 20px;
     }
     .place-badge {
         display: inline-block;
@@ -138,10 +121,9 @@ st.markdown("""
         padding: 3px 10px;
         border-radius: 20px;
         margin-bottom: 8px;
-        letter-spacing: 0.5px;
     }
     .place-title {
-        font-size: 17px;
+        font-size: 18px;
         font-weight: 700;
         color: var(--text-primary);
         margin-bottom: 4px;
@@ -150,28 +132,25 @@ st.markdown("""
         font-size: 12px;
         color: var(--text-secondary);
         margin-bottom: 8px;
-        font-weight: 500;
     }
     .place-address {
         font-size: 13px;
         color: var(--text-address);
-        margin-bottom: 12px;
+        margin-bottom: 14px;
     }
     .map-btn {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
         background-color: #03C75A;
         color: #FFFFFF !important;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
-        padding: 7px 14px;
+        padding: 8px 16px;
         border-radius: 8px;
         text-decoration: none !important;
         box-shadow: 0 2px 6px rgba(3, 199, 90, 0.2);
     }
 
-    /* 일정 박스 스타일 */
     .plan-box {
         background-color: var(--plan-bg);
         border: 1px solid var(--plan-border);
@@ -182,11 +161,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. API 인증 설정 (Secrets 우선 적용 -> 없으면 사이드바 입력)
+# 4. API 인증 설정 (Secrets 우선 적용)
 client_id = st.secrets.get("NAVER_CLIENT_ID", "")
 client_secret = st.secrets.get("NAVER_CLIENT_SECRET", "")
 
-# Secrets에 설정이 안 되어 있을 때만 사이드바 입력창 노출
 if not client_id or not client_secret:
     with st.sidebar:
         st.subheader("⚙️ API 인증 설정")
@@ -203,6 +181,32 @@ st.markdown("""
 
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
+
+# 예비 감성 대표 이미지 URL 모음
+DEFAULT_IMAGES = {
+    "🍽️ 맛집": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
+    "☕ 카페": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
+    "🏞️ 관광지": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
+    "🌙 야경": "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=80"
+}
+
+# 네이버 이미지 검색 API로 실제 장소 사진 가져오기
+def get_place_image(location, place_title, category_key, client_id, client_secret):
+    url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
+    headers = {
+        "X-NCP-APIGW-API-KEY-ID": client_id,
+        "X-NCP-APIGW-API-KEY": client_secret
+    }
+    params = {"query": f"{location} {place_title}", "display": 1, "sort": "sim"}
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code == 200:
+            items = res.json().get("items", [])
+            if items:
+                return items[0].get("link") or items[0].get("thumbnail")
+    except:
+        pass
+    return DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
 
 # 6. 파이썬 자체 동선 정렬 함수
 def generate_smart_schedule(itinerary_list):
@@ -265,7 +269,6 @@ with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
 
     st.write("**카테고리 선택**")
-    # 트렌디한 카드 스타일로 커스텀된 대분류 라디오 버튼
     category = st.radio(
         "대분류 선택", 
         ["🍽️ 맛집", "☕ 카페", "🏞️ 관광지", "🌙 야경"],
@@ -314,18 +317,24 @@ with tab1:
                         address = item.get("roadAddress") or item.get("address", "")
                         cat = item.get("category", "")
                         
+                        # 대표 사진 및 지도 URL 가져오기
+                        img_url = get_place_image(location, title, category, client_id, client_secret)
                         map_query = urllib.parse.quote(f"{location} {title}")
                         map_url = f"https://map.naver.com/v5/search/{map_query}"
                         
+                        # 대표 사진 + 네이버 지도 버튼 포함 카드 레이아웃
                         st.markdown(f"""
                             <div class="place-card">
-                                <span class="place-badge">TOP {idx}</span>
-                                <div class="place-title">{title}</div>
-                                <div class="place-category">🏷️ {cat}</div>
-                                <div class="place-address">📍 {address}</div>
-                                <a href="{map_url}" target="_blank" class="map-btn">
-                                    네이버 지도로 위치 확인 ↗
-                                </a>
+                                <img src="{img_url}" class="place-img" alt="{title}">
+                                <div class="place-content">
+                                    <span class="place-badge">TOP {idx}</span>
+                                    <div class="place-title">{title}</div>
+                                    <div class="place-category">🏷️ {cat}</div>
+                                    <div class="place-address">📍 {address}</div>
+                                    <a href="{map_url}" target="_blank" class="map-btn">
+                                        네이버 지도로 위치 확인 ↗
+                                    </a>
+                                </div>
                             </div>
                         """, unsafe_allow_html=True)
                         
