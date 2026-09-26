@@ -22,9 +22,12 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (히어로 배너, 대분류 칩, 버튼)
+# 3. 여행 감성 커스텀 CSS (6장 앨범 그리드 & 비율 고정 스타일)
 # -------------------------------------------------------------
 st.markdown("""
+    <!-- 외부 이미지 리퍼러 보안 차단 해제 -->
+    <meta name="referrer" content="no-referrer">
+
     <style>
     /* 히어로 배너 */
     .hero-container {
@@ -63,6 +66,14 @@ st.markdown("""
         cursor: pointer;
         font-weight: 600 !important;
         font-size: 14px !important;
+    }
+
+    /* 📸 6장 갤러리: 컬럼 내 이미지 높이 고정 및 비율 자동 크롭 */
+    div[data-testid="stColumn"] img {
+        height: 110px !important;
+        object-fit: cover !important;
+        width: 100% !important;
+        border-radius: 8px !important;
     }
 
     /* 네이버 지도 버튼 */
@@ -114,12 +125,28 @@ st.markdown("""
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 고화질 대표 예비 이미지
+# 고화질 대표 예비 이미지 목록
 DEFAULT_IMAGES = {
-    "🍽️ 맛집": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
-    "☕ 카페": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
-    "🏞️ 관광지": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
-    "🌙 야경": "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=80"
+    "🍽️ 맛집": [
+        "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80",
+        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80",
+        "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&q=80"
+    ],
+    "☕ 카페": [
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
+        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80"
+    ],
+    "🏞️ 관광지": [
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
+        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80",
+        "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=80"
+    ],
+    "🌙 야경": [
+        "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=80",
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&q=80",
+        "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=600&q=80"
+    ]
 }
 
 # -------------------------------------------------------------
@@ -145,8 +172,8 @@ def fetch_naver_search(query, c_id, c_secret):
     return items
 
 @st.cache_data(ttl=3600)
-def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=3):
-    """이미지 검색 API (인기 사진 3장 가져오기)"""
+def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
+    """이미지 검색 API (인기 대표 사진 6장 가져오기)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     params = {"query": f"{location_name} {place_title}", "display": display_count, "sort": "sim"}
@@ -156,15 +183,17 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
         if res.status_code == 200:
             items = res.json().get("items", [])
             for item in items:
-                link = item.get("link") or item.get("thumbnail")
+                link = item.get("thumbnail") or item.get("link")
                 if link:
                     img_list.append(link)
     except Exception:
         pass
 
-    fallback_img = DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
+    fallbacks = DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
+    fb_idx = 0
     while len(img_list) < display_count:
-        img_list.append(fallback_img)
+        img_list.append(fallbacks[fb_idx % len(fallbacks)])
+        fb_idx += 1
 
     return img_list[:display_count]
 
@@ -227,7 +256,7 @@ def generate_smart_schedule(itinerary_list):
 tab1, tab2 = st.tabs(["🧭 장소 탐색", f"🗓️ 나의 일정표 ({len(st.session_state.itinerary)})"])
 
 # -------------------------------------------------------------
-# TAB 1: 장소 검색 & 네이버 플레이스 스타일 카드
+# TAB 1: 장소 검색 & 6장 앨범 그리드 카드
 # -------------------------------------------------------------
 with tab1:
     location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
@@ -264,18 +293,19 @@ with tab1:
                     address = item.get("roadAddress") or item.get("address", "")
                     cat = item.get("category", "")
                     
-                    img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=3)
+                    # 장소별 인기 대표 사진 6장 로드
+                    img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=6)
                     map_query = urllib.parse.quote(f"{location} {title}")
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
-                    # 네이버 플레이스 스타일 카드 컨테이너
                     with st.container(border=True):
-                        # 📸 3분할 대표 이미지 그리드 (메인 1장 + 서브 2장)
-                        img_cols = st.columns([2, 1, 1])
-                        for c_idx, col in enumerate(img_cols):
-                            with col:
-                                if c_idx < len(img_urls):
-                                    st.image(img_urls[c_idx], use_container_width=True)
+                        # 🖼️ 2행 3열 (3장씩 2줄) 갤러리 그리드
+                        for row in range(2):
+                            img_cols = st.columns(3)
+                            for c_idx in range(3):
+                                img_idx = row * 3 + c_idx
+                                if img_idx < len(img_urls):
+                                    img_cols[c_idx].image(img_urls[img_idx], use_container_width=True)
                         
                         st.write("")
                         st.markdown(f"### **{idx}. {title}**")
