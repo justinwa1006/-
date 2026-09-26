@@ -22,10 +22,9 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 여행 감성 커스텀 CSS (다크모드 완벽 대응 + 고화질 피드)
+# 3. 커스텀 CSS (다크모드 대응 + 태그 뱃지 스타일 개선)
 # -------------------------------------------------------------
 st.markdown("""
-    <!-- 외부 이미지 리퍼러 보안 차단 해제 -->
     <meta name="referrer" content="no-referrer">
 
     <style>
@@ -59,7 +58,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* 🏷️ 다크모드 대응 카테고리 칩 (stRadio) */
+    /* 🏷️ 다크모드 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -89,7 +88,7 @@ st.markdown("""
         border-color: #64748B !important;
     }
 
-    /* 📸 카드 컨테이너 (다크/라이트 호환 스타일) */
+    /* 📸 카드 컨테이너 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 20px !important;
         border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -99,7 +98,7 @@ st.markdown("""
         margin-bottom: 18px !important;
     }
 
-    /* 🖼️ 1:1 정사각형 고화질 인스타 피드 그리드 */
+    /* 🖼️ 1:1 고화질 이미지 피드 */
     div[data-testid="stColumn"] div[data-testid="stImage"] {
         border-radius: 12px !important;
         overflow: hidden !important;
@@ -116,37 +115,31 @@ st.markdown("""
         transition: transform 0.3s ease, filter 0.3s ease !important;
     }
 
-    /* 인스타 피드 호버 효과 */
     div[data-testid="stColumn"] div[data-testid="stImage"]:hover img {
         transform: scale(1.06) !important;
         filter: brightness(1.05) !important;
     }
 
-    /* 🔍 전체화면(확대) 클릭 시 원본 비율 복원 */
-    div[data-testid="stStyledFullScreenFrame"] img,
-    div[role="dialog"] img,
-    div[data-testid="stModal"] img,
-    div[data-baseweb="modal"] img {
-        aspect-ratio: auto !important;
-        height: auto !important;
-        max-height: 85vh !important;
-        width: auto !important;
-        max-width: 90vw !important;
-        object-fit: contain !important;
-        border-radius: 8px !important;
+    /* 🏷️ 다채로운 인스타 감성 태그 뱃지 */
+    .tag-container {
+        margin: 8px 0 12px 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
     }
-
-    /* 감성 뱃지 & 해시태그 스타일 */
     .tag-badge {
         display: inline-block;
         background: #27272A;
-        color: #E4E4E7;
+        color: #38BDF8;
         font-size: 12px;
         font-weight: 600;
         padding: 4px 10px;
         border-radius: 8px;
-        margin-right: 6px;
-        border: 1px solid #3F3F46;
+        border: 1px solid #0284C7;
+    }
+    .tag-badge-sub {
+        color: #F472B6;
+        border-color: #DB2777;
     }
 
     /* 네이버 지도 버튼 */
@@ -168,7 +161,6 @@ st.markdown("""
         transform: translateY(-1px);
     }
 
-    /* 일정 출력 박스 */
     .plan-box {
         background-color: #18181B;
         border: 1px solid #27272A;
@@ -181,7 +173,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 4. API 인증 설정 (Secrets 우선 적용)
+# 4. API 인증 설정
 # -------------------------------------------------------------
 client_id = st.secrets.get("NAVER_CLIENT_ID", "")
 client_secret = st.secrets.get("NAVER_CLIENT_SECRET", "")
@@ -205,55 +197,89 @@ st.markdown("""
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 고화질 백업 이미지 목록
+# 백업 이미지
 DEFAULT_IMAGES = {
     "🍽️ 맛집": [
         "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1000&q=85",
-        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1000&q=85",
-        "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=1000&q=85"
+        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1000&q=85"
     ],
     "☕ 카페": [
         "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1000&q=85",
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1000&q=85",
-        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1000&q=85"
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1000&q=85"
     ],
     "🏞️ 관광지": [
         "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1000&q=85",
-        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1000&q=85",
-        "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1000&q=85"
+        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1000&q=85"
     ],
     "🌙 야경": [
         "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1000&q=85",
-        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1000&q=85",
-        "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1000&q=85"
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1000&q=85"
     ]
 }
 
 # -------------------------------------------------------------
-# 6. API 캐싱 처리 함수
+# 6. 스마트 동적 해시태그 생성기
+# -------------------------------------------------------------
+def generate_tags(raw_category, address, title):
+    """지루한 단일 태그 대신 동네/카테고리 기반 인스타 태그 자동 구성"""
+    tags = []
+    
+    # 1. 동네/지역 태그 추출 (예: 애월읍 -> #애월, 서귀포시 -> #서귀포)
+    addr_match = re.search(r'([가-힣]+(?:읍|면|동|리|시))', address)
+    if addr_match:
+        loc_tag = addr_match.group(1).replace('특별자치도', '').replace('시', '').replace('읍', '').replace('면', '')
+        if len(loc_tag) >= 2:
+            tags.append(f"#{loc_tag}핫플")
+
+    # 2. 세부 카테고리 태그 분리 (예: 음식점>한식>육류 -> #한식, #육류)
+    cat_parts = [p.strip() for p in raw_category.split('>') if p.strip()]
+    for part in cat_parts:
+        if part not in ["음식점", "카페,디저트", "여행,명소", "관광,명소"]:
+            tags.append(f"#{part}")
+
+    # 3. 감성 보충 태그
+    if "카페" in raw_category or "디저트" in raw_category:
+        tags.extend(["#오션뷰", "#감성카페"])
+    elif "음식점" in raw_category:
+        tags.extend(["#제주맛집", "#식도락"])
+    else:
+        tags.extend(["#인생샷", "#제주여행"])
+
+    # 중복 제거 및 최대 4개 추출
+    unique_tags = list(dict.fromkeys(tags))[:4]
+    
+    html = '<div class="tag-container">'
+    for i, t in enumerate(unique_tags):
+        cls = "tag-badge-sub" if i % 2 == 1 else ""
+        html += f'<span class="tag-badge {cls}">{t}</span>'
+    html += '</div>'
+    return html
+
+# -------------------------------------------------------------
+# 7. API 캐싱 처리 함수
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_naver_search(query, c_id, c_secret):
-    """장소 검색 API (1시간 캐싱)"""
+    """장소 검색 API (15개 상위 장소 수집)"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
-    params1 = {"query": query, "display": 5, "start": 1, "sort": "comment"}
-    params2 = {"query": query, "display": 5, "start": 6, "sort": "comment"}
     items = []
-    try:
-        res1 = requests.get(url, headers=headers, params=params1)
-        res2 = requests.get(url, headers=headers, params=params2)
-        if res1.status_code == 200:
-            items.extend(res1.json().get("items", []))
-        if res2.status_code == 200:
-            items.extend(res2.json().get("items", []))
-    except Exception:
-        pass
+    for start in [1, 6, 11]:
+        params = {"query": query, "display": 5, "start": start, "sort": "comment"}
+        try:
+            res = requests.get(url, headers=headers, params=params)
+            if res.status_code == 200:
+                fetched = res.json().get("items", [])
+                if not fetched:
+                    break
+                items.extend(fetched)
+        except Exception:
+            break
     return items
 
 @st.cache_data(ttl=3600)
 def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
-    """이미지 검색 API (고화질 원본 link 우선 가져오기)"""
+    """고화질 원본 이미지 수집"""
     url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
     params = {"query": f"{location_name} {place_title}", "display": display_count * 2, "sort": "sim"}
@@ -263,7 +289,6 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
         if res.status_code == 200:
             items = res.json().get("items", [])
             for item in items:
-                # 저화질 thumbnail 대신 고화질 원본 link 적용
                 link = item.get("link") or item.get("thumbnail")
                 if link and link.startswith("http"):
                     img_list.append(link)
@@ -279,7 +304,7 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
     return img_list[:display_count]
 
 # -------------------------------------------------------------
-# 7. 최적 동선 정렬 함수
+# 8. 동선 정렬 함수
 # -------------------------------------------------------------
 def generate_smart_schedule(itinerary_list):
     meals, cafes, spots, nights, others = [], [], [], [], []
@@ -332,15 +357,17 @@ def generate_smart_schedule(itinerary_list):
     return plan_md
 
 # -------------------------------------------------------------
-# 8. 탭 구성
+# 9. 메인 탭 UI
 # -------------------------------------------------------------
 tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len(st.session_state.itinerary)})"])
 
-# -------------------------------------------------------------
-# TAB 1: 장소 검색 & 인스타 감성 피드 갤러리
-# -------------------------------------------------------------
 with tab1:
-    location = st.text_input("📍 떠나실 목적지를 입력하세요", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
+    location = st.text_input("📍 떠나실 목적지를 입력하세요", value="제주도", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
+
+    # 제주도 세부 지역 필터
+    sub_area = "전체"
+    if "제주" in location:
+        sub_area = st.selectbox("🏝️ 제주 세부 지역 선택", ["전체", "애월/한림", "서귀포/중문", "성산/구좌", "제주시/조천"])
 
     st.write("**카테고리 선택**")
     category = st.radio(
@@ -361,25 +388,30 @@ with tab1:
             st.info("💡 사이드바 또는 Streamlit Secrets에 Naver API Key를 설정해 주세요.")
         else:
             clean_category = category.split()[-1]
-            query = f"{location} {subcategory}" if subcategory != "전체" else f"{location} {clean_category}"
+            
+            search_location = location
+            if sub_area != "전체":
+                search_location = f"제주 {sub_area.split('/')[0]}"
+            
+            query = f"{search_location} {subcategory}" if subcategory != "전체" else f"{search_location} {clean_category}"
             
             items = fetch_naver_search(query, client_id, client_secret)
             
             if items:
                 st.write("")
-                st.markdown(f"#### 📸 **{location}** 인기 {query.replace(location, '').strip()} TOP {len(items)}")
+                st.markdown(f"#### 📸 **{search_location}** 인기 {query.replace(search_location, '').strip()} TOP {len(items)}")
                 
                 for idx, item in enumerate(items, 1):
                     title = clean_html(item.get("title", ""))
                     address = item.get("roadAddress") or item.get("address", "")
-                    cat = item.get("category", "")
+                    raw_cat = item.get("category", "")
                     
-                    img_urls = get_place_images(location, title, category, client_id, client_secret, display_count=6)
-                    map_query = urllib.parse.quote(f"{location} {title}")
+                    img_urls = get_place_images(search_location, title, category, client_id, client_secret, display_count=6)
+                    map_query = urllib.parse.quote(f"{search_location} {title}")
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 🖼️ 1:1 고화질 피드 그리드 (2행 3열)
+                        # 1:1 이미지 피드
                         for row in range(2):
                             img_cols = st.columns(3)
                             for c_idx in range(3):
@@ -389,14 +421,17 @@ with tab1:
                         
                         st.write("")
                         st.markdown(f"### **{idx}. {title}**")
-                        st.markdown(f'<span class="tag-badge">#{cat}</span> <span class="tag-badge">#{location}핫플</span>', unsafe_allow_html=True)
+                        
+                        # ✨ 개선된 동적 해시태그 바
+                        st.markdown(generate_tags(raw_cat, address, title), unsafe_allow_html=True)
+                        
                         st.caption(f"📍 {address}")
                         
                         col_map, col_add = st.columns([1.5, 1])
                         with col_map:
                             st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>', unsafe_allow_html=True)
                         with col_add:
-                            place_info = {"title": title, "address": address, "category": cat}
+                            place_info = {"title": title, "address": address, "category": raw_cat}
                             if st.button(f"➕ 일정 담기", key=f"add_{idx}_{title}"):
                                 if place_info not in st.session_state.itinerary:
                                     st.session_state.itinerary.append(place_info)
@@ -408,7 +443,7 @@ with tab1:
                 st.warning("검색 결과가 없습니다.")
 
 # -------------------------------------------------------------
-# TAB 2: 담은 일정 & 1초 동선 생성
+# TAB 2: 담은 일정 코스
 # -------------------------------------------------------------
 with tab2:
     if st.session_state.itinerary:
