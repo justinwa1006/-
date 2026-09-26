@@ -222,19 +222,11 @@ if not client_id or not client_secret:
         client_secret = st.text_input("Naver Client Secret", type="password")
 
 # -------------------------------------------------------------
-# 5. 상단 헤더
+# 5. 헬퍼 함수 정의
 # -------------------------------------------------------------
-st.markdown("""
-    <div class="hero-container">
-        <div class="hero-title">✨ TRIP LOG</div>
-        <div class="hero-subtitle">인스타 감성 핫플 & 스마트 여행 플래너</div>
-    </div>
-""", unsafe_allow_html=True)
-
 def clean_html(text):
     return re.sub(r'<[^>]+>', '', text)
 
-# 백업 이미지
 DEFAULT_IMAGES = {
     "🍽️ 맛집": [
         "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1000&q=85",
@@ -254,12 +246,8 @@ DEFAULT_IMAGES = {
     ]
 }
 
-# -------------------------------------------------------------
-# 6. 태그 & 슬라이더 HTML 생성기
-# -------------------------------------------------------------
 def generate_tags(raw_category, address, title, location_name=""):
     tags = []
-    
     addr_match = re.search(r'([가-힣]+(?:읍|면|동|리|구|시))', address)
     if addr_match:
         loc_tag = addr_match.group(1).replace('특별자치도', '').replace('광역시', '').replace('특별시', '').replace('시', '').replace('구', '').replace('읍', '').replace('면', '')
@@ -299,21 +287,18 @@ def generate_carousel_html(img_urls):
     return html
 
 # -------------------------------------------------------------
-# 7. API 캐싱 처리 함수 (🎯 TOP 10 1회 호출 & 중복 제거)
+# 6. API 캐싱 처리 함수
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_naver_search(query, c_id, c_secret):
     url = "https://naverapihub.apigw.ntruss.com/search/v1/local"
     headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
-    # display=10으로 1번에 10개 요청
     params = {"query": query, "display": 10, "start": 1, "sort": "comment"}
     
     try:
         res = requests.get(url, headers=headers, params=params)
         if res.status_code == 200:
             items = res.json().get("items", [])
-            
-            # 상호명(title) 기준 중복 제거
             seen_titles = set()
             unique_items = []
             for item in items:
@@ -321,14 +306,38 @@ def fetch_naver_search(query, c_id, c_secret):
                 if clean_title not in seen_titles:
                     seen_titles.add(clean_title)
                     unique_items.append(item)
-                    
             return unique_items
     except Exception:
         pass
     return []
 
+@st.cache_data(ttl=3600)
+def get_place_images(location_name, place_title, category_key, c_id, c_secret, display_count=6):
+    url = "https://naverapihub.apigw.ntruss.com/search/v1/image"
+    headers = {"X-NCP-APIGW-API-KEY-ID": c_id, "X-NCP-APIGW-API-KEY": c_secret}
+    params = {"query": f"{location_name} {place_title}", "display": display_count * 2, "sort": "sim"}
+    img_list = []
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code == 200:
+            items = res.json().get("items", [])
+            for item in items:
+                link = item.get("link") or item.get("thumbnail")
+                if link and link.startswith("http"):
+                    img_list.append(link)
+    except Exception:
+        pass
+
+    fallbacks = DEFAULT_IMAGES.get(category_key, DEFAULT_IMAGES["🏞️ 관광지"])
+    fb_idx = 0
+    while len(img_list) < display_count:
+        img_list.append(fallbacks[fb_idx % len(fallbacks)])
+        fb_idx += 1
+
+    return img_list[:display_count]
+
 # -------------------------------------------------------------
-# 8. 동선 정렬 함수
+# 7. 동선 정렬 함수
 # -------------------------------------------------------------
 def generate_smart_schedule(itinerary_list):
     meals, cafes, spots, nights, others = [], [], [], [], []
@@ -381,12 +390,18 @@ def generate_smart_schedule(itinerary_list):
     return plan_md
 
 # -------------------------------------------------------------
-# 9. 메인 탭 UI
+# 8. 메인 UI
 # -------------------------------------------------------------
+st.markdown("""
+    <div class="hero-container">
+        <div class="hero-title">✨ TRIP LOG</div>
+        <div class="hero-subtitle">인스타 감성 핫플 & 스마트 여행 플래너</div>
+    </div>
+""", unsafe_allow_html=True)
+
 tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len(st.session_state.itinerary)})"])
 
 with tab1:
-    # 기본값(value)을 빈 문자열로 변경하여 입력 창을 비워둡니다.
     location = st.text_input("📍 떠나실 목적지", value="", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
 
     sub_area = "전체"
@@ -407,7 +422,6 @@ with tab1:
     elif category == "☕ 카페":
         subcategory = st.selectbox("☕ 카페 세부 종류", ["전체", "디저트/베이커리", "뷰맛집", "대형카페", "감성카페"])
 
-    # 목적지가 입력되었을 때만 검색 실행
     if location.strip():
         if not client_id or not client_secret:
             st.info("💡 사이드바 또는 Streamlit Secrets에 Naver API Key를 설정해 주세요.")
