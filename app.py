@@ -22,129 +22,134 @@ if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
 
 # -------------------------------------------------------------
-# 3. 커스텀 CSS (모바일 슬라이더 + 다크모드 대응)
+# 3. 커스텀 CSS (📱 모바일 퍼스트 가독성 최적화)
 # -------------------------------------------------------------
 st.markdown("""
     <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
     * {
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        box-sizing: border-box;
     }
 
-    /* 히어로 배너 */
+    /* 📱 모바일 화면 여백 최적화 (Streamlit 기본 패딩 축소) */
+    .block-container {
+        padding-top: 1.2rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+        max-width: 500px !important; /* 모바일 앱 뷰 규격 */
+    }
+
+    /* 콤팩트 히어로 배너 */
     .hero-container {
         background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4834D4 100%);
-        padding: 28px 20px;
-        border-radius: 22px;
+        padding: 20px 16px;
+        border-radius: 18px;
         color: #FFFFFF !important;
-        margin-bottom: 24px;
-        box-shadow: 0 12px 28px -6px rgba(255, 107, 107, 0.35);
+        margin-bottom: 16px;
+        box-shadow: 0 8px 20px -4px rgba(255, 107, 107, 0.3);
         text-align: center;
     }
     .hero-title {
-        font-size: 26px;
+        font-size: 22px;
         font-weight: 900;
         letter-spacing: -0.5px;
         margin: 0;
         color: #FFFFFF !important;
     }
     .hero-subtitle {
-        font-size: 13px;
+        font-size: 12px;
         color: #FFEAA7 !important;
-        margin-top: 6px;
+        margin-top: 4px;
         font-weight: 500;
+        opacity: 0.95;
     }
 
-    /* 🏷️ 다크모드 카테고리 칩 (stRadio) */
+    /* 🏷️ 모바일 터치형 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
         flex-direction: row;
-        gap: 8px;
+        gap: 6px;
         flex-wrap: wrap;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
     div[data-testid="stRadio"] label {
-        border-radius: 20px !important;
-        padding: 8px 18px !important;
+        flex: 1 1 calc(50% - 6px) !important; /* 모바일 2열 정렬 */
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 12px !important;
+        padding: 8px 12px !important;
         cursor: pointer;
-        font-weight: 600 !important;
-        font-size: 14px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
         border: 1px solid #334155 !important;
         background: #1E293B !important;
         color: #F8FAFC !important;
-        transition: all 0.2s ease !important;
+        text-align: center !important;
     }
     div[data-testid="stRadio"] label p,
     div[data-testid="stRadio"] label span {
         color: #F8FAFC !important;
-        font-weight: 600 !important;
-    }
-    div[data-testid="stRadio"] label:hover {
-        background: #334155 !important;
-        border-color: #64748B !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
     }
 
-    /* 📸 카드 컨테이너 */
+    /* 📸 콤팩트 카드 컨테이너 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 20px !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25) !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2) !important;
         background: #18181B !important;
-        padding: 18px !important;
-        margin-bottom: 18px !important;
+        padding: 14px !important;
+        margin-bottom: 14px !important;
     }
 
-    /* 📱 모바일 가로 터치 스와이프 슬라이더 CSS */
+    /* 📱 스와이프 힌트가 들어간 모바일 가로 슬라이더 */
     .carousel-container {
         display: flex;
         overflow-x: auto;
         scroll-snap-type: x mandatory;
-        gap: 10px;
-        padding-bottom: 8px;
+        gap: 8px;
+        padding-bottom: 4px;
         -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        scrollbar-color: #334155 transparent;
+        scrollbar-width: none; /* 스크롤바 숨김으로 깔끔함 유지 */
     }
     .carousel-container::-webkit-scrollbar {
-        height: 4px;
-    }
-    .carousel-container::-webkit-scrollbar-thumb {
-        background: #334155;
-        border-radius: 10px;
+        display: none;
     }
     .carousel-img {
-        flex: 0 0 72%;
-        max-width: 260px;
+        flex: 0 0 78%; /* 78% 지정으로 다음 사진 피드가 오른쪽 살짝 보임 */
+        max-width: 250px;
         aspect-ratio: 1 / 1;
         object-fit: cover;
-        border-radius: 14px;
+        border-radius: 12px;
         scroll-snap-align: start;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-        transition: transform 0.2s ease;
-    }
-    .carousel-img:active {
-        transform: scale(0.98);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
 
-    /* 🏷️ 다채로운 인스타 감성 태그 뱃지 */
+    /* 🏷️ 인스타 감성 태그 뱃지 */
     .tag-container {
-        margin: 8px 0 12px 0;
+        margin: 6px 0 10px 0;
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 5px;
     }
     .tag-badge {
         display: inline-block;
         background: #27272A;
         color: #38BDF8;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
-        padding: 4px 10px;
-        border-radius: 8px;
+        padding: 3px 8px;
+        border-radius: 6px;
         border: 1px solid #0284C7;
     }
     .tag-badge-sub {
@@ -152,32 +157,40 @@ st.markdown("""
         border-color: #DB2777;
     }
 
+    /* 모바일 풀너비 터치 버튼 */
+    div[data-testid="stButton"] button {
+        width: 100% !important;
+        min-height: 44px !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+    }
+
     /* 네이버 지도 버튼 */
     .map-btn {
-        display: inline-flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         background-color: #03C75A;
         color: #FFFFFF !important;
         font-size: 13px;
         font-weight: 700;
-        padding: 8px 16px;
+        height: 44px;
         border-radius: 10px;
         text-decoration: none !important;
-        box-shadow: 0 4px 10px rgba(3, 199, 90, 0.25);
-        transition: transform 0.15s ease;
-    }
-    .map-btn:hover {
-        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(3, 199, 90, 0.2);
+        width: 100%;
+        margin-bottom: 6px;
     }
 
     .plan-box {
         background-color: #18181B;
         border: 1px solid #27272A;
-        border-radius: 18px;
-        padding: 22px;
-        margin-top: 16px;
+        border-radius: 14px;
+        padding: 16px;
+        margin-top: 12px;
         color: #F4F4F5;
+        font-size: 14px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -200,7 +213,7 @@ if not client_id or not client_secret:
 st.markdown("""
     <div class="hero-container">
         <div class="hero-title">✨ TRIP LOG</div>
-        <div class="hero-subtitle">인스타 감성 핫플 탐색 & 스마트 감성 코스 플래너</div>
+        <div class="hero-subtitle">인스타 감성 핫플 & 스마트 여행 플래너</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -231,28 +244,26 @@ DEFAULT_IMAGES = {
 # 6. 전국 대응 동적 태그 & 슬라이더 HTML 생성기
 # -------------------------------------------------------------
 def generate_tags(raw_category, address, title, location_name=""):
-    """검색한 도시/지역명에 따라 맞춤형 인스타 태그 동적 생성"""
     tags = []
     
-    # 1. 주소에서 세부 동네 추출 (예: 애월읍 -> #애월핫플, 해운대구 -> #해운대핫플)
+    # 1. 동네 추출
     addr_match = re.search(r'([가-힣]+(?:읍|면|동|리|구|시))', address)
     if addr_match:
         loc_tag = addr_match.group(1).replace('특별자치도', '').replace('광역시', '').replace('특별시', '').replace('시', '').replace('구', '').replace('읍', '').replace('면', '')
         if len(loc_tag) >= 2:
             tags.append(f"#{loc_tag}핫플")
 
-    # 2. 세부 카테고리 태그 분리
+    # 2. 카테고리 추출
     cat_parts = [p.strip() for p in raw_category.split('>') if p.strip()]
     for part in cat_parts:
         if part not in ["음식점", "카페,디저트", "여행,명소", "관광,명소"]:
             tags.append(f"#{part}")
 
-    # 3. 검색 지역명 정리 (예: "부산광역시" -> "부산", "제주도" -> "제주")
+    # 3. 입력 지역명 기반
     clean_loc = re.sub(r'(특별자치도|광역시|특별시|자치도|시|도)$', '', location_name.strip())
     if not clean_loc:
         clean_loc = location_name.strip()
 
-    # 4. 장소 성격 및 지역 맞춤형 태그 조합
     if "카페" in raw_category or "디저트" in raw_category:
         tags.extend(["#오션뷰", "#감성카페"])
     elif "음식점" in raw_category:
@@ -260,7 +271,6 @@ def generate_tags(raw_category, address, title, location_name=""):
     else:
         tags.extend(["#인생샷", f"#{clean_loc}여행" if clean_loc else "#국내여행"])
 
-    # 중복 제거 및 최대 4개 정렬
     unique_tags = list(dict.fromkeys(tags))[:4]
     
     html = '<div class="tag-container">'
@@ -271,7 +281,6 @@ def generate_tags(raw_category, address, title, location_name=""):
     return html
 
 def generate_carousel_html(img_urls):
-    """모바일 스와이프 슬라이더 HTML 구성"""
     html = '<div class="carousel-container">'
     for url in img_urls:
         html += f'<img src="{url}" class="carousel-img" alt="place_img" loading="lazy"/>'
@@ -383,11 +392,11 @@ def generate_smart_schedule(itinerary_list):
 tab1, tab2 = st.tabs(["🧭 감성 핫플 탐색", f"🗓️ 나의 코스 ({len(st.session_state.itinerary)})"])
 
 with tab1:
-    location = st.text_input("📍 떠나실 목적지를 입력하세요", value="제주도", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
+    location = st.text_input("📍 떠나실 목적지", value="제주도", placeholder="예: 제주도, 강릉, 속초, 부산, 여수")
 
     sub_area = "전체"
     if "제주" in location:
-        sub_area = st.selectbox("🏝️ 제주 세부 지역 선택", ["전체", "애월/한림", "서귀포/중문", "성산/구좌", "제주시/조천"])
+        sub_area = st.selectbox("🏝️ 제주 세부 지역", ["전체", "애월/한림", "서귀포/중문", "성산/구좌", "제주시/조천"])
 
     st.write("**카테고리 선택**")
     category = st.radio(
@@ -431,29 +440,25 @@ with tab1:
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
                     with st.container(border=True):
-                        # 📱 모바일 최적화 좌우 스와이프 이미지 슬라이더
+                        # 📱 모바일 가로 스와이프 슬라이더
                         st.markdown(generate_carousel_html(img_urls), unsafe_allow_html=True)
                         
                         st.write("")
-                        st.markdown(f"### **{idx}. {title}**")
-                        
-                        # ✨ 전국 대응 동적 태그 생성
+                        st.markdown(f"#### **{idx}. {title}**")
                         st.markdown(generate_tags(raw_cat, address, title, location_name=search_location), unsafe_allow_html=True)
-                        
                         st.caption(f"📍 {address}")
                         
-                        col_map, col_add = st.columns([1.5, 1])
-                        with col_map:
-                            st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>', unsafe_allow_html=True)
-                        with col_add:
-                            place_info = {"title": title, "address": address, "category": raw_cat}
-                            if st.button(f"➕ 일정 담기", key=f"add_{idx}_{title}"):
-                                if place_info not in st.session_state.itinerary:
-                                    st.session_state.itinerary.append(place_info)
-                                    st.toast(f"✅ '{title}' 일정에 추가되었습니다!")
-                                    st.rerun()
-                                else:
-                                    st.toast(f"⚠️ 이미 담긴 장소입니다.")
+                        # 모바일 터치 최적화 버튼 레이아웃
+                        st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>', unsafe_allow_html=True)
+                        
+                        place_info = {"title": title, "address": address, "category": raw_cat}
+                        if st.button(f"➕ 일정 담기", key=f"add_{idx}_{title}"):
+                            if place_info not in st.session_state.itinerary:
+                                st.session_state.itinerary.append(place_info)
+                                st.toast(f"✅ '{title}' 일정 추가!")
+                                st.rerun()
+                            else:
+                                st.toast(f"⚠️ 이미 담긴 장소입니다.")
             else:
                 st.warning("검색 결과가 없습니다.")
 
@@ -466,7 +471,7 @@ with tab2:
         
         itinerary_text = ""
         for i, place in enumerate(st.session_state.itinerary, 1):
-            col_item, col_del = st.columns([5, 1])
+            col_item, col_del = st.columns([4, 1])
             with col_item:
                 st.write(f"**{i}. {place['title']}** (`{place['category']}`)")
                 st.caption(f"📍 {place['address']}")
@@ -484,11 +489,11 @@ with tab2:
 
         st.write("---")
         st.subheader("⚡ 1초 자동 동선 정렬")
-        st.caption("장소 성격(맛집, 카페, 관광지, 야경)에 맞춰 가장 효율적인 시간대별 동선을 짜드립니다.")
+        st.caption("장소 성격에 맞춰 가장 효율적인 시간대별 동선을 짜드립니다.")
         
         if st.button("🚀 시간대별 자동 일정표 생성하기"):
             st.session_state.schedule_plan = generate_smart_schedule(st.session_state.itinerary)
-            st.success("🎉 최적 동선 일정표 생성이 완료되었습니다!")
+            st.success("🎉 최적 동선 일정표 생성 완료!")
 
         if st.session_state.schedule_plan:
             st.markdown('<div class="plan-box">', unsafe_allow_html=True)
