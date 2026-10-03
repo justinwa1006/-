@@ -12,9 +12,6 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 # 클라이언트 생성
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Supabase 클라이언트 연결
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 # -------------------------------------------------------------
 # 1. 페이지 레이아웃 설정
 # -------------------------------------------------------------
