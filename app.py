@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import re
 import urllib.parse
+from datetime import date
 
 # -------------------------------------------------------------
 # 1. 페이지 레이아웃 설정
@@ -36,20 +37,21 @@ st.markdown("""
         box-sizing: border-box;
     }
 
-    /* 🚫 Streamlit 기본 상단 메뉴바(헤더) 완전 숨김 */
+    /* 🚫 Streamlit 기본 상단 메뉴바 숨김 */
     header[data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* 📱 모바일 화면 여백 최적화 (헤더 숨겼을 때의 상단 여백) */
+    /* 📱 모바일 화면 여백 최적화 */
     .block-container {
-        padding-top: 1.8rem !important; /* 기존 여백을 줄여 잘림 방지 */
+        padding-top: 1.8rem !important;
         padding-bottom: 2rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
         max-width: 500px !important;
     }
-    /* 콤팩트 히어로 배너 */
+    
+    /* 히어로 배너 */
     .hero-container {
         background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4834D4 100%);
         padding: 20px 16px;
@@ -74,7 +76,7 @@ st.markdown("""
         opacity: 0.95;
     }
 
-    /* ☀️ 카테고리 칩 (stRadio) */
+    /* 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -119,7 +121,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* 📸 카드 컨테이너 */
+    /* 카드 컨테이너 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 16px !important;
         border: 1px solid #E2E8F0 !important;
@@ -129,7 +131,7 @@ st.markdown("""
         margin-bottom: 14px !important;
     }
 
-    /* 📱 모바일 가로 슬라이더 */
+    /* 모바일 가로 슬라이더 */
     .carousel-container {
         display: flex;
         overflow-x: auto;
@@ -152,7 +154,7 @@ st.markdown("""
         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
 
-    /* 🏷️ #해시태그 뱃지 */
+    /* 태그 뱃지 */
     .tag-container {
         margin: 6px 0 10px 0;
         display: flex;
@@ -175,30 +177,40 @@ st.markdown("""
         border-color: #FECDD3;
     }
 
-    /* 모바일 버튼 터치 최적화 */
-    div[data-testid="stButton"] button {
-        width: 100% !important;
-        min-height: 44px !important;
-        border-radius: 10px !important;
-        font-weight: 700 !important;
-        font-size: 13px !important;
+    /* 외부 링크 버튼 그리드 */
+    .link-btn-grid {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
     }
-
-    /* 네이버 지도 버튼 */
-    .map-btn {
+    .map-btn, .insta-btn {
+        flex: 1;
         display: flex !important;
         align-items: center;
         justify-content: center;
-        background-color: #03C75A;
-        color: #FFFFFF !important;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
-        height: 44px;
+        height: 40px;
         border-radius: 10px;
         text-decoration: none !important;
+        color: #FFFFFF !important;
+    }
+    .map-btn {
+        background-color: #03C75A;
         box-shadow: 0 3px 8px rgba(3, 199, 90, 0.2);
-        width: 100%;
-        margin-bottom: 6px;
+    }
+    .insta-btn {
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        box-shadow: 0 3px 8px rgba(220, 39, 67, 0.2);
+    }
+
+    /* 모바일 버튼 최적화 */
+    div[data-testid="stButton"] button {
+        width: 100% !important;
+        min-height: 40px !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
     }
 
     .plan-box {
@@ -341,55 +353,55 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
     return img_list[:display_count]
 
 # -------------------------------------------------------------
-# 7. 동선 정렬 함수
+# 7. 동선 정렬 함수 (날짜별 그룹화 지원)
 # -------------------------------------------------------------
 def generate_smart_schedule(itinerary_list):
-    meals, cafes, spots, nights, others = [], [], [], [], []
-
+    # 날짜별 그룹핑
+    grouped_by_date = {}
     for item in itinerary_list:
-        cat = item.get("category", "")
-        if any(k in cat for k in ["음식점", "한식", "양식", "일식", "중식", "고기", "해산물", "뷔페", "분식"]):
-            meals.append(item)
-        elif any(k in cat for k in ["카페", "디저트", "베이커리", "차"]):
-            cafes.append(item)
-        elif any(k in cat for k in ["야경", "전망대", "전망"]):
-            nights.append(item)
-        elif any(k in cat for k in ["관광", "명소", "공원", "해수욕장", "테마파크", "박물관"]):
-            spots.append(item)
-        else:
-            others.append(item)
+        d_str = str(item.get("date", "날짜 미정"))
+        if d_str not in grouped_by_date:
+            grouped_by_date[d_str] = []
+        grouped_by_date[d_str].append(item)
 
-    schedule = []
+    plan_md = "### 🗺️ 날짜별 추천 최적 여행 동선\n\n"
 
-    if spots:
-        schedule.append(("10:00 - 12:00 [오전 관광]", spots.pop(0)))
-    elif cafes:
-        schedule.append(("10:30 - 12:00 [오전 티타임]", cafes.pop(0)))
+    for visit_date in sorted(grouped_by_date.keys()):
+        plan_md += f"#### 📅 {visit_date}\n"
+        day_items = grouped_by_date[visit_date]
+        
+        meals, cafes, spots, nights, others = [], [], [], [], []
+        for item in day_items:
+            cat = item.get("category", "")
+            if any(k in cat for k in ["음식점", "한식", "양식", "일식", "중식", "고기", "해산물", "뷔페", "분식"]):
+                meals.append(item)
+            elif any(k in cat for k in ["카페", "디저트", "베이커리", "차"]):
+                cafes.append(item)
+            elif any(k in cat for k in ["야경", "전망대", "전망"]):
+                nights.append(item)
+            elif any(k in cat for k in ["관광", "명소", "공원", "해수욕장", "테마파크", "박물관"]):
+                spots.append(item)
+            else:
+                others.append(item)
 
-    if meals:
-        schedule.append(("12:30 - 14:00 [점심 식사]", meals.pop(0)))
+        schedule = []
+        if spots: schedule.append(("10:00 - 12:00 [오전 관광]", spots.pop(0)))
+        elif cafes: schedule.append(("10:30 - 12:00 [오전 티타임]", cafes.pop(0)))
 
-    if cafes:
-        schedule.append(("14:30 - 16:00 [디저트 & 카페]", cafes.pop(0)))
+        if meals: schedule.append(("12:30 - 14:00 [점심 식사]", meals.pop(0)))
+        if cafes: schedule.append(("14:30 - 16:00 [디저트 & 카페]", cafes.pop(0)))
+        if spots: schedule.append(("16:00 - 18:00 [오후 관광]", spots.pop(0)))
+        if meals: schedule.append(("18:30 - 20:00 [저녁 식사]", meals.pop(0)))
+        if nights: schedule.append(("20:30 - 21:30 [야경 코스]", nights.pop(0)))
 
-    if spots:
-        schedule.append(("16:00 - 18:00 [오후 관광]", spots.pop(0)))
+        remaining = spots + meals + cafes + nights + others
+        for rem in remaining:
+            schedule.append(("자유 방문 추천 장소", rem))
 
-    if meals:
-        schedule.append(("18:30 - 20:00 [저녁 식사]", meals.pop(0)))
-
-    if nights:
-        schedule.append(("20:30 - 21:30 [야경 코스]", nights.pop(0)))
-
-    remaining = spots + meals + cafes + nights + others
-    for rem in remaining:
-        schedule.append(("자유 방문 추천 장소", rem))
-
-    plan_md = "### 🗺️ 추천 최적 여행 동선\n\n"
-    for time_slot, place in schedule:
-        plan_md += f"**{time_slot}**  \n"
-        plan_md += f"└ 📍 **{place['title']}** (`{place['category']}`)  \n"
-        plan_md += f"   *주소: {place['address']}*  \n\n"
+        for time_slot, place in schedule:
+            plan_md += f"**{time_slot}**  \n"
+            plan_md += f"└ 📍 **{place['title']}** (`{place['category']}`)  \n"
+            plan_md += f"   *주소: {place['address']}*  \n\n"
 
     return plan_md
 
@@ -450,8 +462,13 @@ with tab1:
                     raw_cat = item.get("category", "")
                     
                     img_urls = get_place_images(search_location, title, category, client_id, client_secret, display_count=6)
+                    
+                    # 네이버 지도 / 인스타그램 링크 파라미터 생성
                     map_query = urllib.parse.quote(f"{search_location} {title}")
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
+                    
+                    insta_query = urllib.parse.quote(f"{search_location}{title}".replace(" ", ""))
+                    insta_url = f"https://www.instagram.com/explore/tags/{insta_query}/"
                     
                     with st.container(border=True):
                         st.markdown(generate_carousel_html(img_urls), unsafe_allow_html=True)
@@ -461,16 +478,32 @@ with tab1:
                         st.markdown(generate_tags(raw_cat, address, title, location_name=search_location), unsafe_allow_html=True)
                         st.caption(f"📍 {address}")
                         
-                        st.markdown(f'<a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>', unsafe_allow_html=True)
+                        # 네이버 지도 + 인스타그램 버튼 바
+                        st.markdown(f'''
+                            <div class="link-btn-grid">
+                                <a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>
+                                <a href="{insta_url}" target="_blank" class="insta-btn">📸 인스타그램 ↗</a>
+                            </div>
+                        ''', unsafe_allow_html=True)
                         
-                        place_info = {"title": title, "address": address, "category": raw_cat}
-                        if st.button(f"➕ 일정 담기", key=f"add_{idx}_{title}"):
-                            if place_info not in st.session_state.itinerary:
-                                st.session_state.itinerary.append(place_info)
-                                st.toast(f"✅ '{title}' 일정 추가!")
-                                st.rerun()
-                            else:
-                                st.toast(f"⚠️ 이미 담긴 장소입니다.")
+                        # 일정 담기 popover (날짜 선택 추가)
+                        with st.popover(f"➕ 일정 담기", use_container_width=True):
+                            selected_date = st.date_input("방문 날짜 선택", value=date.today(), key=f"date_{idx}_{title}")
+                            if st.button("확인 및 일정 추가", key=f"add_btn_{idx}_{title}"):
+                                place_info = {
+                                    "title": title, 
+                                    "address": address, 
+                                    "category": raw_cat,
+                                    "date": selected_date
+                                }
+                                # 중복 체크 (동일 장소 & 동일 날짜)
+                                is_duplicate = any(p['title'] == title and p['date'] == selected_date for p in st.session_state.itinerary)
+                                if not is_duplicate:
+                                    st.session_state.itinerary.append(place_info)
+                                    st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
+                                    st.rerun()
+                                else:
+                                    st.toast(f"⚠️ 이미 해당 날짜에 담긴 장소입니다.")
             else:
                 st.warning("검색 결과가 없습니다.")
     else:
@@ -483,17 +516,27 @@ with tab2:
     if st.session_state.itinerary:
         st.subheader("📋 선택한 장소 목록")
         
+        # 날짜별 오름차순 정렬
+        sorted_itinerary = sorted(st.session_state.itinerary, key=lambda x: x['date'])
+        
         itinerary_text = ""
-        for i, place in enumerate(st.session_state.itinerary, 1):
+        current_date = None
+        
+        for i, place in enumerate(sorted_itinerary, 1):
+            if current_date != place['date']:
+                current_date = place['date']
+                st.markdown(f"#### 📅 {current_date}")
+                itinerary_text += f"\n[📅 {current_date}]\n"
+                
             col_item, col_del = st.columns([4, 1])
             with col_item:
-                st.write(f"**{i}. {place['title']}** (`{place['category']}`)")
+                st.write(f"**{place['title']}** (`{place['category']}`)")
                 st.caption(f"📍 {place['address']}")
             with col_del:
-                if st.button("삭제", key=f"del_{i}"):
-                    st.session_state.itinerary.pop(i - 1)
+                if st.button("삭제", key=f"del_{i}_{place['title']}"):
+                    st.session_state.itinerary.remove(place)
                     st.rerun()
-            itinerary_text += f"{i}. {place['title']} ({place['category']}) - {place['address']}\n"
+            itinerary_text += f"- {place['title']} ({place['category']}) - {place['address']}\n"
         
         st.write("")
         if st.button("🗑️ 일정 전체 비우기"):
@@ -503,7 +546,7 @@ with tab2:
 
         st.write("---")
         st.subheader("⚡ 1초 자동 동선 정렬")
-        st.caption("장소 성격에 맞춰 가장 효율적인 시간대별 동선을 짜드립니다.")
+        st.caption("장소 성격과 날짜에 맞춰 가장 효율적인 시간대별 동선을 짜드립니다.")
         
         if st.button("🚀 시간대별 자동 일정표 생성하기"):
             st.session_state.schedule_plan = generate_smart_schedule(st.session_state.itinerary)
@@ -515,7 +558,7 @@ with tab2:
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.write("---")
-        st.text_area("📋 일정 텍스트 복사 (카톡/메모장 공유용)", value=itinerary_text, height=120)
+        st.text_area("📋 일정 텍스트 복사 (카톡/메모장 공유용)", value=itinerary_text.strip(), height=150)
 
     else:
         st.info("💡 **'🧭 감성 핫플 탐색'** 탭에서 마음에 드는 장소의 **'➕ 일정 담기'** 버튼을 눌러 나만의 코스를 담아보세요!")
