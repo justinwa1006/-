@@ -3,6 +3,17 @@ import requests
 import re
 import urllib.parse
 from datetime import date
+from supabase import create_client, Client
+
+# Supabase 연결 설정
+SUPABASE_URL = "https://wtllperjappemsnvtrfm.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bGxwZXJqYXBwZW1zbnZ0cmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMTY3NDYsImV4cCI6MjEwNjU5Mjc0Nn0.Yav2YOteRtoECzTp1oHEaMCwQjLt45Z_zbpGw3X1WJ8"  # Copy 버튼으로 복사한 긴 문자열 넣기
+
+# 클라이언트 생성
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Supabase 클라이언트 연결
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -------------------------------------------------------------
 # 1. 페이지 레이아웃 설정
