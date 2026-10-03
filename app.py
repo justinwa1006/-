@@ -513,11 +513,14 @@ with tab1:
                                 }
                                 # 중복 체크 (동일 장소 & 동일 날짜)
                                 is_duplicate = any(p['title'] == title and p['date'] == selected_date for p in st.session_state.itinerary)
-                                if not is_duplicate:
-                                    st.session_state.itinerary.append(place_info)
-                                    # 장소 추가 시 DB에 저장
-                                    supabase.table("my_courses").insert({"title": title, "category": raw_cat}).execute()[cite: 1]
-                                    st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
+if not is_duplicate:
+                st.session_state.itinerary.append(place_info)
+                # ✅ append 밑으로 줄을 딱 맞추어야 버튼 눌렀을 때만 작동함!
+                try:
+                    supabase.table("my_courses").insert({"title": title, "category": raw_cat}).execute()
+                except Exception as e:
+                    pass
+                st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
                                     st.rerun()
                                 else:
                                     st.toast(f"⚠️ 이미 해당 날짜에 담긴 장소입니다.")
