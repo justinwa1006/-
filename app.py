@@ -23,27 +23,29 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# 2. 세션 스테이트 초기화
+# 2. 세션 스테이트 초기화 (앱 로딩 시 최초 1회만 DB 로드)
 # -------------------------------------------------------------
 if "itinerary" not in st.session_state:
     st.session_state.itinerary = []
 if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
-    
-# 앱 실행 시 Supabase에서 저장된 코스 데이터 불러오기
-try:
-    response = supabase.table("my_courses").select("*").execute()
-    if response.data and not st.session_state.itinerary:
-        st.session_state.itinerary = [
-            {
-                "title": item.get("title", ""),
-                "category": item.get("category", ""),
-                "address": item.get("address", ""),
-                "date": date.today()
-            } for item in response.data
-        ]
-except Exception as e:
-    pass
+
+if "initialized" not in st.session_state:
+    st.session_state.initialized = True
+    try:
+        response = supabase.table("my_courses").select("*").execute()
+        if response.data:
+            st.session_state.itinerary = [
+                {
+                    "id": item.get("id"),
+                    "title": item.get("title", ""),
+                    "category": item.get("category", ""),
+                    "address": item.get("address", ""),
+                    "date": date.fromisoformat(item.get("visit_date")) if item.get("visit_date") else date.today()
+                } for item in response.data
+            ]
+    except Exception as e:
+        pass
 
 # -------------------------------------------------------------
 # 3. 커스텀 CSS (☀️ 밝은 테마 가독성 & 터치 최적화)
@@ -509,20 +511,29 @@ with tab1:
                         with st.popover("➕ 일정 담기", use_container_width=True):
                             selected_date = st.date_input("방문 날짜 선택", value=date.today(), key=f"date_{idx}_{title}")
                             if st.button("확인 및 일정 추가", key=f"add_btn_{idx}_{title}"):
-                                place_info = {
-                                    "title": title, 
-                                    "address": address, 
-                                    "category": raw_cat,
-                                    "date": selected_date
-                                }
-                                # 중복 체크 (동일 장소 & 동일 날짜)
                                 is_duplicate = any(p['title'] == title and p['date'] == selected_date for p in st.session_state.itinerary)
                                 if not is_duplicate:
-                                    st.session_state.itinerary.append(place_info)
+                                    db_id = None
                                     try:
-                                        supabase.table("my_courses").insert({"title": title, "category": raw_cat, "address": address}).execute()
+                                        res = supabase.table("my_courses").insert({
+                                            "title": title, 
+                                            "category": raw_cat, 
+                                            "address": address,
+                                            "visit_date": str(selected_date)
+                                        }).execute()
+                                        if res.data:
+                                            db_id = res.data[0].get("id")
                                     except Exception as e:
                                         pass
+                                    
+                                    place_info = {
+                                        "id": db_id,
+                                        "title": title, 
+                                        "address": address, 
+                                        "category": raw_cat,
+                                        "date": selected_date
+                                    }
+                                    st.session_state.itinerary.append(place_info)
                                     st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
                                     st.rerun()
                                 else:
@@ -536,26 +547,8 @@ with tab1:
 # TAB 2: 담은 일정 코스
 # -------------------------------------------------------------
 with tab2:
-    try:
-        response = supabase.table("my_courses").select("*").execute()
-        db_itinerary = response.data
-    except Exception as e:
-        db_itinerary = []
-
-    if db_itinerary or st.session_state.itinerary:
+    if st.session_state.itinerary:
         st.subheader("📋 선택한 장소 목록")
-        
-        # Supabase DB에 기록된 항목 제거 제어
-        if db_itinerary:
-            for item in db_itinerary:
-                col_item, col_del = st.columns([4, 1])
-                with col_item:
-                    st.write(f"**{item['title']}** (`{item.get('category', '')}`)")
-                with col_del:
-                    if st.button("삭제", key=f"del_db_{item['id']}"):
-                        supabase.table("my_courses").delete().eq("id", item['id']).execute()
-                        st.session_state.itinerary = [p for p in st.session_state.itinerary if p['title'] != item['title']]
-                        st.rerun()
         
         # 날짜별 오름차순 정렬
         sorted_itinerary = sorted(st.session_state.itinerary, key=lambda x: x['date'])
@@ -569,14 +562,35 @@ with tab2:
                 st.markdown(f"#### 📅 {current_date}")
                 itinerary_text += f"\n[📅 {current_date}]\n"
                 
-            col_item, col_del = st.columns([4, 1])
+            col_item, col_edit, col_del = st.columns([3, 1.2, 0.8])
             with col_item:
                 st.write(f"**{place['title']}** (`{place['category']}`)")
                 st.caption(f"📍 {place['address']}")
+            
+            # 📅 날짜 수정 Popover
+            with col_edit:
+                with st.popover("📅 날짜 변경", use_container_width=True):
+                    new_date = st.date_input("새 방문 날짜", value=place['date'], key=f"edit_date_{i}_{place['title']}")
+                    if st.button("변경 저장", key=f"save_date_{i}_{place['title']}"):
+                        place['date'] = new_date
+                        if place.get('id'):
+                            try:
+                                supabase.table("my_courses").update({"visit_date": str(new_date)}).eq("id", place['id']).execute()
+                            except Exception as e:
+                                pass
+                        st.toast(f"📅 날짜 변경 완료: {new_date}")
+                        st.rerun()
+
             with col_del:
                 if st.button("삭제", key=f"del_state_{i}_{place['title']}"):
+                    if place.get('id'):
+                        try:
+                            supabase.table("my_courses").delete().eq("id", place['id']).execute()
+                        except Exception as e:
+                            pass
                     st.session_state.itinerary.remove(place)
                     st.rerun()
+                    
             itinerary_text += f"- {place['title']} ({place['category']}) - {place['address']}\n"
         
         st.write("")
