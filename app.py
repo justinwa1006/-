@@ -23,7 +23,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# 2. 세션 스테이트 초기화 (앱 로딩 시 최초 1회만 DB 로드)
+# 2. 세션 스테이트 초기화 (앱 로딩 시 DB에서 데이터 로드)
 # -------------------------------------------------------------
 if "itinerary" not in st.session_state:
     st.session_state.itinerary = []
@@ -45,7 +45,7 @@ if "initialized" not in st.session_state:
                 } for item in response.data
             ]
     except Exception as e:
-        pass
+        st.error(f"⚠️️ DB 로딩 실패: {e}")
 
 # -------------------------------------------------------------
 # 3. 커스텀 CSS (☀️ 밝은 테마 가독성 & 터치 최적화)
@@ -62,12 +62,10 @@ st.markdown("""
         box-sizing: border-box;
     }
 
-    /* 🚫 Streamlit 기본 상단 메뉴바 숨김 */
     header[data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* 📱 모바일 화면 여백 최적화 */
     .block-container {
         padding-top: 1.8rem !important;
         padding-bottom: 2rem !important;
@@ -76,7 +74,6 @@ st.markdown("""
         max-width: 500px !important;
     }
     
-    /* 히어로 배너 */
     .hero-container {
         background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4834D4 100%);
         padding: 20px 16px;
@@ -101,7 +98,6 @@ st.markdown("""
         opacity: 0.95;
     }
 
-    /* 카테고리 칩 (stRadio) */
     div[data-testid="stRadio"] > label { display: none !important; }
     div[data-testid="stRadio"] > div {
         display: flex;
@@ -146,7 +142,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* 카드 컨테이너 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 16px !important;
         border: 1px solid #E2E8F0 !important;
@@ -156,7 +151,6 @@ st.markdown("""
         margin-bottom: 14px !important;
     }
 
-    /* 모바일 가로 슬라이더 */
     .carousel-container {
         display: flex;
         overflow-x: auto;
@@ -179,7 +173,6 @@ st.markdown("""
         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
 
-    /* 태그 뱃지 */
     .tag-container {
         margin: 6px 0 10px 0;
         display: flex;
@@ -202,7 +195,6 @@ st.markdown("""
         border-color: #FECDD3;
     }
 
-    /* 외부 링크 버튼 그리드 */
     .link-btn-grid {
         display: flex;
         gap: 6px;
@@ -229,7 +221,6 @@ st.markdown("""
         box-shadow: 0 3px 8px rgba(220, 39, 67, 0.2);
     }
 
-    /* 모바일 버튼 최적화 */
     div[data-testid="stButton"] button {
         width: 100% !important;
         min-height: 40px !important;
@@ -378,7 +369,7 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
     return img_list[:display_count]
 
 # -------------------------------------------------------------
-# 7. 동선 정렬 함수 (날짜별 그룹화 지원)
+# 7. 동선 정렬 함수
 # -------------------------------------------------------------
 def generate_smart_schedule(itinerary_list):
     grouped_by_date = {}
@@ -513,7 +504,6 @@ with tab1:
                             if st.button("확인 및 일정 추가", key=f"add_btn_{idx}_{title}"):
                                 is_duplicate = any(p['title'] == title and p['date'] == selected_date for p in st.session_state.itinerary)
                                 if not is_duplicate:
-                                    db_id = None
                                     try:
                                         res = supabase.table("my_courses").insert({
                                             "title": title, 
@@ -521,21 +511,23 @@ with tab1:
                                             "address": address,
                                             "visit_date": str(selected_date)
                                         }).execute()
+                                        
                                         if res.data:
                                             db_id = res.data[0].get("id")
+                                            place_info = {
+                                                "id": db_id,
+                                                "title": title, 
+                                                "address": address, 
+                                                "category": raw_cat,
+                                                "date": selected_date
+                                            }
+                                            st.session_state.itinerary.append(place_info)
+                                            st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
+                                            st.rerun()
+                                        else:
+                                            st.error("⚠️ DB 저장 실패: 응답 데이터가 없습니다.")
                                     except Exception as e:
-                                        pass
-                                    
-                                    place_info = {
-                                        "id": db_id,
-                                        "title": title, 
-                                        "address": address, 
-                                        "category": raw_cat,
-                                        "date": selected_date
-                                    }
-                                    st.session_state.itinerary.append(place_info)
-                                    st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
-                                    st.rerun()
+                                        st.error(f"⚠️ Supabase 저장 에러: {e}")
                                 else:
                                     st.toast("⚠️ 이미 해당 날짜에 담긴 장소입니다.")
             else:
@@ -550,7 +542,6 @@ with tab2:
     if st.session_state.itinerary:
         st.subheader("📋 선택한 장소 목록")
         
-        # 날짜별 오름차순 정렬
         sorted_itinerary = sorted(st.session_state.itinerary, key=lambda x: x['date'])
         
         itinerary_text = ""
@@ -567,7 +558,6 @@ with tab2:
                 st.write(f"**{place['title']}** (`{place['category']}`)")
                 st.caption(f"📍 {place['address']}")
             
-            # 📅 날짜 수정 Popover
             with col_edit:
                 with st.popover("📅 날짜 변경", use_container_width=True):
                     new_date = st.date_input("새 방문 날짜", value=place['date'], key=f"edit_date_{i}_{place['title']}")
@@ -577,7 +567,7 @@ with tab2:
                             try:
                                 supabase.table("my_courses").update({"visit_date": str(new_date)}).eq("id", place['id']).execute()
                             except Exception as e:
-                                pass
+                                st.error(f"날짜 변경 실패: {e}")
                         st.toast(f"📅 날짜 변경 완료: {new_date}")
                         st.rerun()
 
@@ -587,7 +577,7 @@ with tab2:
                         try:
                             supabase.table("my_courses").delete().eq("id", place['id']).execute()
                         except Exception as e:
-                            pass
+                            st.error(f"삭제 실패: {e}")
                     st.session_state.itinerary.remove(place)
                     st.rerun()
                     
@@ -600,7 +590,7 @@ with tab2:
             try:
                 supabase.table("my_courses").delete().neq("id", 0).execute()
             except Exception as e:
-                pass
+                st.error(f"전체 삭제 실패: {e}")
             st.rerun()
 
         st.write("---")
