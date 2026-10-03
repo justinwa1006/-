@@ -7,7 +7,7 @@ from supabase import create_client, Client
 
 # Supabase 연결 설정
 SUPABASE_URL = "https://wtllperjappemsnvtrfm.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bGxwZXJqYXBwZW1zbnZ0cmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMTY3NDYsImV4cCI6MjEwNjU5Mjc0Nn0.Yav2YOteRtoECzTp1oHEaMCwQjLt45Z_zbpGw3X1WJ8"  # Copy 버튼으로 복사한 긴 문자열 넣기
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bGxwZXJqYXBwZW1zbnZ0cmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMTY3NDYsImV4cCI6MjEwNjU5Mjc0Nn0.Yav2YOteRtoECzTp1oHEaMCwQjLt45Z_zbpGw3X1WJ8"
 
 # 클라이언트 생성
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -34,9 +34,17 @@ if "schedule_plan" not in st.session_state:
 try:
     response = supabase.table("my_courses").select("*").execute()
     if response.data and not st.session_state.itinerary:
-        st.session_state.itinerary = [item["title"] for item in response.data]
+        st.session_state.itinerary = [
+            {
+                "title": item.get("title", ""),
+                "category": item.get("category", ""),
+                "address": item.get("address", ""),
+                "date": date.today()
+            } for item in response.data
+        ]
 except Exception as e:
     pass
+
 # -------------------------------------------------------------
 # 3. 커스텀 CSS (☀️ 밝은 테마 가독성 & 터치 최적화)
 # -------------------------------------------------------------
@@ -371,7 +379,6 @@ def get_place_images(location_name, place_title, category_key, c_id, c_secret, d
 # 7. 동선 정렬 함수 (날짜별 그룹화 지원)
 # -------------------------------------------------------------
 def generate_smart_schedule(itinerary_list):
-    # 날짜별 그룹핑
     grouped_by_date = {}
     for item in itinerary_list:
         d_str = str(item.get("date", "날짜 미정"))
@@ -478,7 +485,6 @@ with tab1:
                     
                     img_urls = get_place_images(search_location, title, category, client_id, client_secret, display_count=6)
                     
-                    # 네이버 지도 / 인스타그램 링크 파라미터 생성
                     map_query = urllib.parse.quote(f"{search_location} {title}")
                     map_url = f"https://map.naver.com/v5/search/{map_query}"
                     
@@ -493,7 +499,6 @@ with tab1:
                         st.markdown(generate_tags(raw_cat, address, title, location_name=search_location), unsafe_allow_html=True)
                         st.caption(f"📍 {address}")
                         
-                        # 네이버 지도 + 인스타그램 버튼 바
                         st.markdown(f'''
                             <div class="link-btn-grid">
                                 <a href="{map_url}" target="_blank" class="map-btn">🟢 네이버 지도 ↗</a>
@@ -501,8 +506,7 @@ with tab1:
                             </div>
                         ''', unsafe_allow_html=True)
                         
-                        # 일정 담기 popover (날짜 선택 추가)
-                        with st.popover(f"➕ 일정 담기", use_container_width=True):
+                        with st.popover("➕ 일정 담기", use_container_width=True):
                             selected_date = st.date_input("방문 날짜 선택", value=date.today(), key=f"date_{idx}_{title}")
                             if st.button("확인 및 일정 추가", key=f"add_btn_{idx}_{title}"):
                                 place_info = {
@@ -513,17 +517,16 @@ with tab1:
                                 }
                                 # 중복 체크 (동일 장소 & 동일 날짜)
                                 is_duplicate = any(p['title'] == title and p['date'] == selected_date for p in st.session_state.itinerary)
-if not is_duplicate:
-                st.session_state.itinerary.append(place_info)
-                # ✅ append 밑으로 줄을 딱 맞추어야 버튼 눌렀을 때만 작동함!
-                try:
-                    supabase.table("my_courses").insert({"title": title, "category": raw_cat}).execute()
-                except Exception as e:
-                    pass
-                st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
+                                if not is_duplicate:
+                                    st.session_state.itinerary.append(place_info)
+                                    try:
+                                        supabase.table("my_courses").insert({"title": title, "category": raw_cat, "address": address}).execute()
+                                    except Exception as e:
+                                        pass
+                                    st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
                                     st.rerun()
                                 else:
-                                    st.toast(f"⚠️ 이미 해당 날짜에 담긴 장소입니다.")
+                                    st.toast("⚠️ 이미 해당 날짜에 담긴 장소입니다.")
             else:
                 st.warning("검색 결과가 없습니다.")
     else:
@@ -533,23 +536,26 @@ if not is_duplicate:
 # TAB 2: 담은 일정 코스
 # -------------------------------------------------------------
 with tab2:
-    # Supabase DB에서 저장된 모든 코스 불러오기
     try:
         response = supabase.table("my_courses").select("*").execute()
         db_itinerary = response.data
     except Exception as e:
         db_itinerary = []
 
-    if db_itinerary:
+    if db_itinerary or st.session_state.itinerary:
         st.subheader("📋 선택한 장소 목록")
-        for item in db_itinerary:
-            col_item, col_del = st.columns([4, 1])
-            with col_item:
-                st.write(f"**{item['title']}** (`{item.get('category', '')}`)")
-            with col_del:
-                if st.button("삭제", key=f"del_{item['id']}"):
-                    supabase.table("my_courses").delete().eq("id", item['id']).execute()
-                    st.rerun()
+        
+        # Supabase DB에 기록된 항목 제거 제어
+        if db_itinerary:
+            for item in db_itinerary:
+                col_item, col_del = st.columns([4, 1])
+                with col_item:
+                    st.write(f"**{item['title']}** (`{item.get('category', '')}`)")
+                with col_del:
+                    if st.button("삭제", key=f"del_db_{item['id']}"):
+                        supabase.table("my_courses").delete().eq("id", item['id']).execute()
+                        st.session_state.itinerary = [p for p in st.session_state.itinerary if p['title'] != item['title']]
+                        st.rerun()
         
         # 날짜별 오름차순 정렬
         sorted_itinerary = sorted(st.session_state.itinerary, key=lambda x: x['date'])
@@ -568,7 +574,7 @@ with tab2:
                 st.write(f"**{place['title']}** (`{place['category']}`)")
                 st.caption(f"📍 {place['address']}")
             with col_del:
-                if st.button("삭제", key=f"del_{i}_{place['title']}"):
+                if st.button("삭제", key=f"del_state_{i}_{place['title']}"):
                     st.session_state.itinerary.remove(place)
                     st.rerun()
             itinerary_text += f"- {place['title']} ({place['category']}) - {place['address']}\n"
@@ -577,6 +583,10 @@ with tab2:
         if st.button("🗑️ 일정 전체 비우기"):
             st.session_state.itinerary = []
             st.session_state.schedule_plan = ""
+            try:
+                supabase.table("my_courses").delete().neq("id", 0).execute()
+            except Exception as e:
+                pass
             st.rerun()
 
         st.write("---")
