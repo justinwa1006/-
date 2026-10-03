@@ -29,7 +29,14 @@ if "itinerary" not in st.session_state:
     st.session_state.itinerary = []
 if "schedule_plan" not in st.session_state:
     st.session_state.schedule_plan = ""
-
+    
+# 앱 실행 시 Supabase에서 저장된 코스 데이터 불러오기
+try:
+    response = supabase.table("my_courses").select("*").execute()
+    if response.data and not st.session_state.itinerary:
+        st.session_state.itinerary = [item["title"] for item in response.data]
+except Exception as e:
+    pass
 # -------------------------------------------------------------
 # 3. 커스텀 CSS (☀️ 밝은 테마 가독성 & 터치 최적화)
 # -------------------------------------------------------------
@@ -508,6 +515,8 @@ with tab1:
                                 is_duplicate = any(p['title'] == title and p['date'] == selected_date for p in st.session_state.itinerary)
                                 if not is_duplicate:
                                     st.session_state.itinerary.append(place_info)
+                                    # 장소 추가 시 DB에 저장
+                                    supabase.table("my_courses").insert({"title": title, "category": raw_cat}).execute()[cite: 1]
                                     st.toast(f"✅ [{selected_date}] '{title}' 일정 추가!")
                                     st.rerun()
                                 else:
@@ -521,8 +530,23 @@ with tab1:
 # TAB 2: 담은 일정 코스
 # -------------------------------------------------------------
 with tab2:
-    if st.session_state.itinerary:
+    # Supabase DB에서 저장된 모든 코스 불러오기
+    try:
+        response = supabase.table("my_courses").select("*").execute()
+        db_itinerary = response.data
+    except Exception as e:
+        db_itinerary = []
+
+    if db_itinerary:
         st.subheader("📋 선택한 장소 목록")
+        for item in db_itinerary:
+            col_item, col_del = st.columns([4, 1])
+            with col_item:
+                st.write(f"**{item['title']}** (`{item.get('category', '')}`)")
+            with col_del:
+                if st.button("삭제", key=f"del_{item['id']}"):
+                    supabase.table("my_courses").delete().eq("id", item['id']).execute()
+                    st.rerun()
         
         # 날짜별 오름차순 정렬
         sorted_itinerary = sorted(st.session_state.itinerary, key=lambda x: x['date'])
